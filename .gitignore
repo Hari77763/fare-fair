@@ -48,3 +48,6 @@ Desktop.ini
 # Build & test caches
 *.tsbuildinfo
 .pytest_cache/
+
+# Vercel local link metadata
+.vercel
