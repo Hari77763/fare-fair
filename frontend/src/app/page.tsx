@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight, Bookmark, Info, SlidersHorizontal } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Bookmark, Info, RotateCw, SlidersHorizontal } from 'lucide-react';
 
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -15,6 +15,8 @@ import { FlightCard } from '@/components/FlightCard';
 import { SeatMapModal } from '@/components/SeatMapModal';
 import { BookingToast } from '@/components/BookingToast';
 import { useReveal } from '@/hooks/useReveal';
+import { useLiveFares } from '@/hooks/useLiveFares';
+import { liveFareToItinerary } from '@/lib/fares/toItinerary';
 
 import type {
   CurrencyCode,
@@ -25,13 +27,44 @@ import type {
   FareTier,
   SortOption,
   TimeWindow,
+  DayFare,
 } from '@/types/flight';
-import { majorAirports, mockItineraries, mockDayFares } from '@/data/mockFlights';
+import { mockItineraries, mockDayFares } from '@/data/mockFlights';
+import { findAirport } from '@/data/airports';
 
 // Sample itineraries cover a single route; other routes show an honest notice.
 const SAMPLE_ROUTE = { origin: 'DEL', destination: 'BOM' };
 
 const lowestTotal = (f: FlightItinerary) => f.fareTiers[0].priceInr + f.fareTiers[0].taxesInr;
+
+function todayISO() {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+function shiftDate(iso: string, days: number) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Seven-day window around a date, never starting in the past. */
+function stripStart(dateISO: string) {
+  const start = shiftDate(dateISO, -3);
+  const today = todayISO();
+  return start < today ? today : start;
+}
+
+function toDayFare(dateISO: string, priceInr: number | null, cheapest: number | null): DayFare {
+  const d = new Date(`${dateISO}T00:00:00Z`);
+  return {
+    dateISO,
+    weekday: d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' }),
+    dayNumber: d.getUTCDate(),
+    lowestPriceInr: priceInr,
+    isCheapest: priceInr !== null && priceInr === cheapest,
+  };
+}
 
 function prefersReducedMotion() {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -69,14 +102,18 @@ export default function FlightBookingApp() {
 
   // Search
   const [tripType, setTripType] = useState<TripType>('one-way');
-  const [origin, setOrigin] = useState<Airport>(majorAirports[0]);
-  const [destination, setDestination] = useState<Airport>(majorAirports[1]);
+  const [origin, setOrigin] = useState<Airport>(() => findAirport('DEL') as Airport);
+  const [destination, setDestination] = useState<Airport>(() => findAirport('BOM') as Airport);
   const [departureDate, setDepartureDate] = useState('2026-12-14');
   const [returnDate, setReturnDate] = useState<string | undefined>('2026-12-21');
   const [passengers, setPassengers] = useState<Passengers>({ adults: 1, children: 0, infants: 0 });
   const [cabinClass, setCabinClass] = useState<CabinClass>('Economy');
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchedRoute, setSearchedRoute] = useState(SAMPLE_ROUTE);
+  const { state: live, search: searchLive, calendar, loadCalendar } = useLiveFares();
+  const isSearching = live.status === 'loading';
+  const isLive = live.status === 'live';
+  const searchedRoute = live.query
+    ? { origin: live.query.origin, destination: live.query.destination }
+    : SAMPLE_ROUTE;
 
   // Sticky summary
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -126,10 +163,16 @@ export default function FlightBookingApp() {
     return () => observer.disconnect();
   }, []);
 
+  // Live fares when the fare source answered; demo itineraries otherwise
+  const sourceItineraries = useMemo(
+    () => (isLive ? live.fares.map((f) => liveFareToItinerary(f, live.roundTrip)) : mockItineraries),
+    [isLive, live.fares, live.roundTrip]
+  );
+
   // Airline filter options come from the data, not a hard-coded list
   const airlineOptions = useMemo(() => {
     const map = new Map<string, { code: string; name: string; lowestInr: number }>();
-    for (const f of mockItineraries) {
+    for (const f of sourceItineraries) {
       const seg = f.segments[0];
       const price = lowestTotal(f);
       const existing = map.get(seg.airlineCode);
@@ -138,10 +181,10 @@ export default function FlightBookingApp() {
       }
     }
     return Array.from(map.values()).sort((a, b) => a.lowestInr - b.lowestInr);
-  }, []);
+  }, [sourceItineraries]);
 
   const filteredFlights = useMemo(() => {
-    return mockItineraries
+    return sourceItineraries
       .filter((flight) => {
         if (showSavedOnly && !savedIds.includes(flight.id)) return false;
         if (maxPriceInr < PRICE_MAX_INR && lowestTotal(flight) > maxPriceInr) return false;
@@ -166,14 +209,31 @@ export default function FlightBookingApp() {
         const score = (f: FlightItinerary) => lowestTotal(f) + f.totalDurationMinutes * 10 + f.stops * 1500;
         return score(a) - score(b);
       });
-  }, [showSavedOnly, savedIds, maxPriceInr, selectedStops, selectedAirlines, requireCheckedBag, selectedTimeWindows, sortOption]);
+  }, [sourceItineraries, showSavedOnly, savedIds, maxPriceInr, selectedStops, selectedAirlines, requireCheckedBag, selectedTimeWindows, sortOption]);
 
   // Computed across every itinerary so the badge stays truthful when filters hide some
   const { cheapestId, fastestId } = useMemo(() => {
-    const byPrice = [...mockItineraries].sort((a, b) => lowestTotal(a) - lowestTotal(b));
-    const byTime = [...mockItineraries].sort((a, b) => a.totalDurationMinutes - b.totalDurationMinutes);
+    const byPrice = [...sourceItineraries].sort((a, b) => lowestTotal(a) - lowestTotal(b));
+    const byTime = sourceItineraries
+      .filter((f) => f.totalDurationMinutes > 0)
+      .sort((a, b) => a.totalDurationMinutes - b.totalDurationMinutes);
     return { cheapestId: byPrice[0]?.id, fastestId: byTime[0]?.id };
-  }, []);
+  }, [sourceItineraries]);
+
+  // Date strip: live cheapest-per-day when available, demo days otherwise
+  const dayFares: DayFare[] = useMemo(() => {
+    if (!isLive) return mockDayFares;
+    const start = stripStart(live.query?.departureDate ?? departureDate);
+    const days =
+      calendar.status === 'live' && calendar.days.length
+        ? calendar.days
+        : Array.from({ length: 7 }, (_, i) => ({ dateISO: shiftDate(start, i), priceInr: null }));
+    const prices = days.map((d) => d.priceInr).filter((p): p is number => p !== null);
+    const cheapest = prices.length ? Math.min(...prices) : null;
+    return days.map((d) => toDayFare(d.dateISO, d.priceInr, cheapest));
+    // departureDate only matters before the first live answer
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLive, live.query, calendar]);
 
   const activeFilterCount =
     (maxPriceInr < PRICE_MAX_INR ? 1 : 0) +
@@ -188,24 +248,45 @@ export default function FlightBookingApp() {
     resultsRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
   };
 
+  /** Queries the live fare source; the UI falls back to demo data if it can't answer. */
+  const runSearch = async (opts: { date?: string; scroll?: boolean; from?: Airport; to?: Airport } = {}) => {
+    const dep = opts.date ?? departureDate;
+    const from = opts.from ?? origin;
+    const to = opts.to ?? destination;
+    const ret = tripType === 'round-trip' && returnDate && returnDate >= dep ? returnDate : undefined;
+    setShowSavedOnly(false);
+    setSelectedDayISO(dep);
+    const result = await searchLive({ origin: from.code, destination: to.code, departureDate: dep, returnDate: ret });
+    if (result.status === 'live') loadCalendar(from.code, to.code, stripStart(dep), 7);
+    if (opts.scroll) scrollToResults();
+  };
+
+  // First load: search the default route with a date that is still in the future
+  useEffect(() => {
+    const today = todayISO();
+    const initial = departureDate < today ? shiftDate(today, 21) : departureDate;
+    if (initial !== departureDate) setDepartureDate(initial);
+    runSearch({ date: initial });
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSelectDay = (dateISO: string) => {
-    if (dateISO === selectedDayISO && !isFareStripLoading) return;
-    setSelectedDayISO(dateISO);
+    if (dateISO === selectedDayISO && !isFareStripLoading && !isSearching) return;
     setDepartureDate(dateISO);
+    if (live.status === 'live' || live.status === 'error') {
+      // Real data: fetch fares for the chosen day
+      runSearch({ date: dateISO });
+      return;
+    }
+    setSelectedDayISO(dateISO);
     setIsFareStripLoading(true);
     later(() => setIsFareStripLoading(false), 450);
   };
 
   const handleSearch = () => {
     if (isSearching) return;
-    setIsSearching(true);
-    setShowSavedOnly(false);
-    if (mockDayFares.some((d) => d.dateISO === departureDate)) setSelectedDayISO(departureDate);
-    later(() => {
-      setSearchedRoute({ origin: origin.code, destination: destination.code });
-      setIsSearching(false);
-      scrollToResults();
-    }, 900);
+    runSearch({ scroll: true });
   };
 
   const handleResetFilters = useCallback(() => {
@@ -247,6 +328,10 @@ export default function FlightBookingApp() {
   const travellers = passengers.adults + passengers.children + passengers.infants;
   const isSampleRoute =
     searchedRoute.origin === SAMPLE_ROUTE.origin && searchedRoute.destination === SAMPLE_ROUTE.destination;
+  const isDemo = !isLive && !isSearching;
+  const updatedAt = live.fetchedAt
+    ? new Date(live.fetchedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    : '';
   const compareHref = `/search?origin=${origin.code}&destination=${destination.code}&departure_date=${departureDate}&adults=${passengers.adults}`;
 
   return (
@@ -300,11 +385,13 @@ export default function FlightBookingApp() {
       </section>
 
       <FlexibleFareStrip
-        dayFares={mockDayFares}
+        dayFares={dayFares}
         selectedDate={selectedDayISO}
         onSelectDate={handleSelectDay}
         currency={currency}
-        isLoading={isFareStripLoading}
+        isLoading={isFareStripLoading || isSearching}
+        isLoadingAll={isLive && calendar.status === 'loading'}
+        sourceLabel={isLive ? 'Live' : 'Demo'}
       />
 
       <main id="main" className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
@@ -340,10 +427,10 @@ export default function FlightBookingApp() {
                 </h2>
                 <p className="text-xs text-[var(--text-muted)]" aria-live="polite">
                   {isSearching
-                    ? 'Querying sellers…'
-                    : `${filteredFlights.length} of ${mockItineraries.length} flights${
+                    ? 'Checking the latest fares…'
+                    : `${filteredFlights.length} of ${sourceItineraries.length} ${isLive ? 'live fares' : 'demo flights'}${
                         activeFilterCount ? ` · ${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''} on` : ''
-                      } · prices per adult incl. taxes`}
+                      } · per adult${isLive && updatedAt ? ` · updated ${updatedAt}` : ' incl. taxes'}`}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -367,15 +454,51 @@ export default function FlightBookingApp() {
               </div>
             </div>
 
-            {!isSampleRoute && !isSearching && !showSavedOnly && (
+            {!showSavedOnly && isLive && (
+              <div
+                role="note"
+                className="mb-4 flex animate-fade-up items-start gap-3 glass-card rounded-[var(--radius-control)] px-4 py-3 text-sm text-[var(--text-secondary)]"
+              >
+                <span className="relative mt-1.5 flex h-2 w-2 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-[var(--semantic-success)]" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--semantic-success)]" />
+                </span>
+                <p>
+                  <strong className="font-semibold text-[var(--text-primary)]">Live prices.</strong> The lowest fares travellers
+                  found recently via Aviasales. Seats and the final price are confirmed on the seller’s site.
+                </p>
+              </div>
+            )}
+
+            {!showSavedOnly && isDemo && live.status === 'error' && (
+              <div
+                role="alert"
+                className="mb-4 flex animate-fade-up flex-wrap items-start justify-between gap-3 glass-card rounded-[var(--radius-control)] px-4 py-3 text-sm text-[var(--text-secondary)]"
+              >
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--semantic-warning)]" />
+                  <p>
+                    <strong className="font-semibold text-[var(--text-primary)]">Live fares unavailable.</strong>{' '}
+                    {live.message ?? 'The fare source did not answer.'} Showing demo fares instead.
+                  </p>
+                </div>
+                <button type="button" onClick={() => runSearch()} className="btn btn-secondary h-8 px-3 text-xs">
+                  <RotateCw className="h-3.5 w-3.5" />
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {!showSavedOnly && isDemo && live.status !== 'error' && (
               <div
                 role="note"
                 className="mb-4 flex animate-fade-up items-start gap-3 glass-card rounded-[var(--radius-control)] px-4 py-3 text-sm text-[var(--text-secondary)]"
               >
                 <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
                 <p>
-                  Live fares for <strong className="font-semibold text-[var(--text-primary)]">{searchedRoute.origin} → {searchedRoute.destination}</strong>{' '}
-                  aren’t connected in this demo yet. Showing sample fares for Delhi → Mumbai so you can explore the experience.
+                  <strong className="font-semibold text-[var(--text-primary)]">Demo fares.</strong> Live pricing isn’t switched on
+                  yet, so these are sample Delhi → Mumbai flights
+                  {!isSampleRoute ? ` (you searched ${searchedRoute.origin} → ${searchedRoute.destination})` : ''}.
                 </p>
               </div>
             )}
@@ -393,11 +516,17 @@ export default function FlightBookingApp() {
                     {showSavedOnly ? <Bookmark className="h-5 w-5" /> : <SlidersHorizontal className="h-5 w-5" />}
                   </div>
                   <h3 className="text-base font-semibold text-[var(--text-primary)]">
-                    {showSavedOnly ? 'No saved flights yet' : 'No flights match these filters'}
+                    {showSavedOnly
+                      ? 'No saved flights yet'
+                      : isLive && sourceItineraries.length === 0
+                      ? `No recent fares for ${searchedRoute.origin} → ${searchedRoute.destination} on this date`
+                      : 'No flights match these filters'}
                   </h3>
                   <p className="mx-auto mt-1.5 max-w-sm text-sm text-[var(--text-secondary)]">
                     {showSavedOnly
                       ? 'Tap the bookmark on any flight to keep it here while you compare.'
+                      : isLive && sourceItineraries.length === 0
+                      ? 'Nobody has searched this route and day recently. Try a nearby date in the strip above.'
                       : 'Try a wider departure window, a higher budget or fewer airline filters.'}
                   </p>
                   <button

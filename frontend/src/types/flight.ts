@@ -9,6 +9,7 @@ export interface Airport {
   city: string;       // e.g. 'New Delhi'
   name: string;       // e.g. 'Indira Gandhi International'
   country: string;
+  tz?: string;        // IANA time zone, e.g. 'Asia/Kolkata'
 }
 
 export interface FlightSegment {
@@ -48,6 +49,13 @@ export interface FlightItinerary {
   seatsRemaining: number;
   fareTiers: FareTier[];
   tags: ('non-stop' | 'cheapest' | 'fastest' | 'eco')[];
+  /** Present when this itinerary comes from a live fare source, not demo data */
+  live?: {
+    bookingUrl: string;
+    roundTrip: boolean;
+    foundAt?: string;
+    sourceName: string;
+  };
 }
 
 export interface SeatCell {
@@ -62,7 +70,7 @@ export interface DayFare {
   dateISO: string;
   weekday: string;
   dayNumber: number;
-  lowestPriceInr: number;
+  lowestPriceInr: number | null; // null = no recent fare known for that day
   isCheapest: boolean;
 }
 

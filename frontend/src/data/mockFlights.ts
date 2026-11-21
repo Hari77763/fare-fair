@@ -511,13 +511,13 @@ export const mockItineraries: FlightItinerary[] = [
 
 // 7-Day Flexible Fare Strip
 export const mockDayFares: DayFare[] = [
-  { dateISO: '2026-12-11', weekday: 'Thu', dayNumber: 11, lowestPriceInr: 4790, isCheapest: false },
-  { dateISO: '2026-12-12', weekday: 'Fri', dayNumber: 12, lowestPriceInr: 5350, isCheapest: false },
-  { dateISO: '2026-12-13', weekday: 'Sat', dayNumber: 13, lowestPriceInr: 5120, isCheapest: false },
-  { dateISO: '2026-12-14', weekday: 'Sun', dayNumber: 14, lowestPriceInr: 4190, isCheapest: true },
-  { dateISO: '2026-12-15', weekday: 'Mon', dayNumber: 15, lowestPriceInr: 4450, isCheapest: false },
-  { dateISO: '2026-12-16', weekday: 'Tue', dayNumber: 16, lowestPriceInr: 4620, isCheapest: false },
-  { dateISO: '2026-12-17', weekday: 'Wed', dayNumber: 17, lowestPriceInr: 4890, isCheapest: false },
+  { dateISO: '2026-12-11', weekday: 'Fri', dayNumber: 11, lowestPriceInr: 4790, isCheapest: false },
+  { dateISO: '2026-12-12', weekday: 'Sat', dayNumber: 12, lowestPriceInr: 5350, isCheapest: false },
+  { dateISO: '2026-12-13', weekday: 'Sun', dayNumber: 13, lowestPriceInr: 5120, isCheapest: false },
+  { dateISO: '2026-12-14', weekday: 'Mon', dayNumber: 14, lowestPriceInr: 4190, isCheapest: true },
+  { dateISO: '2026-12-15', weekday: 'Tue', dayNumber: 15, lowestPriceInr: 4450, isCheapest: false },
+  { dateISO: '2026-12-16', weekday: 'Wed', dayNumber: 16, lowestPriceInr: 4620, isCheapest: false },
+  { dateISO: '2026-12-17', weekday: 'Thu', dayNumber: 17, lowestPriceInr: 4890, isCheapest: false },
 ];
 
 // 24-Row Cabin Layout (A B C - aisle - D E F)

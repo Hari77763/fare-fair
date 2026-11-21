@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useId, useRef, useState } from 'react';
-import { Bookmark, Check, ChevronDown, Luggage, Utensils, RotateCcw, Users } from 'lucide-react';
+import { ArrowUpRight, Bookmark, Check, ChevronDown, Luggage, Utensils, RotateCcw, Users } from 'lucide-react';
 import type { FlightItinerary, FareTier, CurrencyCode } from '../types/flight';
 import { convertPrice } from '../data/mockFlights';
 
@@ -40,9 +40,13 @@ export function FlightCard({ flight, currency, onSelectFare, index, isSaved, onT
   const segment = flight.segments[0];
   const lastSegment = flight.segments[flight.segments.length - 1];
   const depTime = wallClock(segment.departureISO);
-  const arrTime = wallClock(lastSegment.arrivalISO);
-  const arrivesNextDay = lastSegment.arrivalISO.slice(0, 10) !== segment.departureISO.slice(0, 10);
-  const lowSeats = flight.seatsRemaining <= 4;
+  const live = flight.live;
+  // Live fares only carry an arrival time when it can be computed correctly
+  const arrTime = lastSegment.arrivalISO ? wallClock(lastSegment.arrivalISO) : '—';
+  const arrivesNextDay =
+    !!lastSegment.arrivalISO && lastSegment.arrivalISO.slice(0, 10) !== segment.departureISO.slice(0, 10);
+  const lowSeats = !live && flight.seatsRemaining <= 4;
+  const durationLabel = flight.totalDurationMinutes > 0 ? formatDuration(flight.totalDurationMinutes) : 'Duration n/a';
 
   // Spotlight border follows the pointer without re-rendering
   const onPointerMove = (e: React.PointerEvent<HTMLElement>) => {
@@ -100,7 +104,9 @@ export function FlightCard({ flight, currency, onSelectFare, index, isSaved, onT
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold text-[var(--text-primary)]">{segment.airlineName}</div>
               <div className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
-                <span className="font-mono">{segment.flightNumber}</span> · {segment.aircraft}
+                {segment.flightNumber && <span className="font-mono">{segment.flightNumber}</span>}
+                {segment.flightNumber && (segment.aircraft || live) && ' · '}
+                {segment.aircraft || (live ? `via ${live.sourceName}` : '')}
               </div>
             </div>
           </div>
@@ -118,7 +124,7 @@ export function FlightCard({ flight, currency, onSelectFare, index, isSaved, onT
 
             <div className="flex-1 px-1 text-center sm:px-3">
               <div className="text-[11px] font-medium text-[var(--text-muted)] tabular-nums">
-                {formatDuration(flight.totalDurationMinutes)}
+                {durationLabel}
               </div>
               <div className="relative my-1.5 flex items-center" aria-hidden="true">
                 <span className="h-1.5 w-1.5 rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)]" />
@@ -168,7 +174,7 @@ export function FlightCard({ flight, currency, onSelectFare, index, isSaved, onT
                 {convertPrice(selectedTier.priceInr + selectedTier.taxesInr, currency)}
               </div>
               <div className="text-[11px] text-[var(--text-muted)]">
-                {selectedTier.name} · incl. taxes
+                {live ? `${live.roundTrip ? 'Round trip' : 'One way'} · per adult` : `${selectedTier.name} · incl. taxes`}
               </div>
             </div>
 
@@ -182,31 +188,47 @@ export function FlightCard({ flight, currency, onSelectFare, index, isSaved, onT
               >
                 <Bookmark className={`h-4 w-4 transition-transform duration-300 ${isSaved ? 'scale-110 fill-current' : ''}`} />
               </button>
-              <button
-                type="button"
-                onClick={() => setExpanded((v) => !v)}
-                aria-expanded={expanded}
-                aria-controls={detailsId}
-                className="btn btn-secondary h-9 px-3 text-xs"
-              >
-                Fares
-                <ChevronDown
-                  className={`h-3.5 w-3.5 transition-transform duration-300 ease-out-expo ${expanded ? 'rotate-180' : ''}`}
-                />
-              </button>
-              <button
-                type="button"
-                onClick={() => onSelectFare(flight, selectedTier)}
-                className="btn btn-primary h-9 px-4 text-xs"
-              >
-                Select
-              </button>
+              {live ? (
+                <a
+                  href={live.bookingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className="btn btn-primary h-9 px-4 text-xs"
+                  aria-label={`View deal for ${segment.airlineName} ${segment.flightNumber} on ${live.sourceName} (opens in a new tab)`}
+                >
+                  View deal
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </a>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setExpanded((v) => !v)}
+                    aria-expanded={expanded}
+                    aria-controls={detailsId}
+                    className="btn btn-secondary h-9 px-3 text-xs"
+                  >
+                    Fares
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform duration-300 ease-out-expo ${expanded ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectFare(flight, selectedTier)}
+                    className="btn btn-primary h-9 px-4 text-xs"
+                  >
+                    Select
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* Expandable fare & segment details */}
+      {!live && (
       <div id={detailsId} className="collapsible" data-open={expanded}>
         <div className="collapsible-inner">
           <div className="border-t border-[var(--border-hairline)] px-4 pb-5 pt-5 sm:px-6">
@@ -305,6 +327,7 @@ export function FlightCard({ flight, currency, onSelectFare, index, isSaved, onT
           </div>
         </div>
       </div>
+      )}
     </article>
   );
 }

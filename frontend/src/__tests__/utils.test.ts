@@ -97,3 +97,13 @@ describe('itinerary and seat data integrity', () => {
     expect(seat?.status).not.toBe('occupied');
   });
 });
+
+describe('demo date strip', () => {
+  it('weekday labels match the real calendar', async () => {
+    const { mockDayFares } = await import('../data/mockFlights');
+    for (const d of mockDayFares) {
+      const real = new Date(`${d.dateISO}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' });
+      expect(d.weekday).toBe(real);
+    }
+  });
+});

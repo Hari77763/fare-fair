@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeftRight, Check, Loader2, Minus, Plus, Search } from 'lucide-react';
 import type { Airport, TripType, CabinClass } from '../types/flight';
-import { majorAirports } from '../data/mockFlights';
+import { AIRPORTS } from '../data/airports';
 import { AirportPicker } from './AirportPicker';
 import { Segmented } from './Segmented';
 import { useDismiss } from '../hooks/useDismiss';
@@ -208,7 +208,7 @@ export function HeroSearch({
               label="From"
               value={origin}
               onChange={onOriginChange}
-              airports={majorAirports}
+              airports={AIRPORTS}
               excludeCode={destination.code}
               triggerRef={originTriggerRef}
             />
@@ -216,7 +216,7 @@ export function HeroSearch({
               label="To"
               value={destination}
               onChange={onDestinationChange}
-              airports={majorAirports}
+              airports={AIRPORTS}
               excludeCode={origin.code}
             />
             <button

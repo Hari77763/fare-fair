@@ -93,7 +93,18 @@ The deployable web app is the Next.js project in `frontend/`.
 
 - **Root Directory:** `frontend`
 - **Framework preset:** Next.js (auto-detected) — default build (`next build`) and output settings
-- **Environment variables:** none required (no secrets are used by the frontend)
+- **Environment variables:**
+  - `TRAVELPAYOUTS_TOKEN` (optional, server-only) — turns on live fares. Without it the site shows clearly-labelled demo data.
+  - `TRAVELPAYOUTS_MARKER` (optional) — your Travelpayouts affiliate marker, added to booking links.
+
+### Live fares
+
+Search results and the flexible-date strip come from the Travelpayouts (Aviasales) Data API through two server routes, so the token never reaches the browser:
+
+- `GET /api/fares?origin=DEL&destination=BOM&departure_date=YYYY-MM-DD[&return_date=YYYY-MM-DD]`
+- `GET /api/fares/calendar?origin=DEL&destination=BOM&start=YYYY-MM-DD&days=7`
+
+Prices are the lowest fares travellers found recently (cached, refreshed about every 10 minutes); seats and the final price are confirmed on the seller's site. If the source is unconfigured or unavailable, the UI says so and falls back to demo data.
 
 The FastAPI backend is not deployed to Vercel; it needs PostgreSQL and Redis and is intended for container hosting (see `infrastructure/docker`).
 

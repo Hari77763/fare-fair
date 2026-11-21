@@ -10,6 +10,10 @@ interface FlexibleFareStripProps {
   onSelectDate: (dateISO: string) => void;
   currency: CurrencyCode;
   isLoading: boolean;
+  /** Shimmer every day (e.g. while a live calendar loads) */
+  isLoadingAll?: boolean;
+  /** Small source label shown beside the heading, e.g. "Live · Aviasales" */
+  sourceLabel?: string;
 }
 
 export function FlexibleFareStrip({
@@ -18,6 +22,8 @@ export function FlexibleFareStrip({
   onSelectDate,
   currency,
   isLoading,
+  isLoadingAll = false,
+  sourceLabel,
 }: FlexibleFareStripProps) {
   const month = new Date(`${dayFares[0]?.dateISO}T00:00:00Z`).toLocaleDateString('en-GB', {
     month: 'long',
@@ -30,6 +36,11 @@ export function FlexibleFareStrip({
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 id="fare-strip-title" className="text-sm font-semibold text-[var(--text-primary)]">
           Flexible dates <span className="hidden font-normal text-[var(--text-muted)] sm:inline">· {month}</span>
+          {sourceLabel && (
+            <span className="ml-2 rounded-full bg-[var(--semantic-success-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--semantic-success)]">
+              {sourceLabel}
+            </span>
+          )}
         </h2>
         <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-[var(--text-muted)]">
           <span className="h-1.5 w-1.5 rounded-full bg-[var(--semantic-success)]" />
@@ -56,7 +67,7 @@ export function FlexibleFareStrip({
               <span className="block text-[11px] font-medium text-[var(--text-muted)]">
                 {fare.weekday} {fare.dayNumber}
               </span>
-              {isLoading && selected ? (
+              {isLoadingAll || (isLoading && selected) ? (
                 <span className="skeleton mx-auto mt-1.5 block h-4 w-14" />
               ) : (
                 <span
@@ -64,7 +75,13 @@ export function FlexibleFareStrip({
                     fare.isCheapest ? 'text-[var(--semantic-success)]' : 'text-[var(--text-primary)]'
                   }`}
                 >
-                  {convertPrice(fare.lowestPriceInr, currency)}
+                  {fare.lowestPriceInr === null ? (
+                    <span className="font-normal text-[var(--text-muted)]" title="No recent fare found for this day">
+                      —
+                    </span>
+                  ) : (
+                    convertPrice(fare.lowestPriceInr, currency)
+                  )}
                 </span>
               )}
               {fare.isCheapest && (
