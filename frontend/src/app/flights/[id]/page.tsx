@@ -22,7 +22,77 @@ import Link from "next/link";
 
 export default function FlightDetailPage({ params }: { params: { id: string } }) {
   const flightId = params?.id || "fl-001";
-  const flight = mockFlights.find((f) => f.id === flightId) || mockFlights[0];
+  let flight = mockFlights.find((f) => f.id === flightId);
+  if (!flight) {
+    const parts = flightId.split("-");
+    const origCode = (parts[1] || "MAA").toUpperCase();
+    const destCode = (parts[2] || "DEL").toUpperCase();
+    flight = {
+      id: flightId,
+      departureAirport: origCode,
+      arrivalAirport: destCode,
+      departureTime: "06:15",
+      arrivalTime: "08:55",
+      totalDurationMinutes: 160,
+      stops: 0,
+      cheapestPaise: 479000,
+      cheapestTrustedPaise: 479000,
+      isSimulated: true,
+      segments: [
+        {
+          airlineCode: "6E",
+          airlineName: "IndiGo",
+          flightNumber: "6E 2041",
+          aircraft: "Airbus A321neo",
+          departureAirport: origCode,
+          departureTime: "06:15",
+          arrivalAirport: destCode,
+          arrivalTime: "08:55",
+          durationMinutes: 160,
+        },
+      ],
+      offers: [
+        {
+          supplierId: "cleartrip",
+          supplierName: "Cleartrip",
+          supplierLogo: "🟩",
+          pricePaise: 479000,
+          taxesPaise: 72000,
+          totalPaise: 479000,
+          deepLink: "https://www.cleartrip.com",
+          verificationState: "verified",
+          lastVerifiedAt: new Date().toISOString(),
+          trustScore: 92,
+          cabinBaggage: "7 kg",
+          checkInBaggage: "15 kg",
+          refundable: true,
+          cancellationFeePaise: 300000,
+          dateChangeFeePaise: 250000,
+          mealIncluded: false,
+          seatSelection: false,
+        },
+        {
+          supplierId: "makemytrip",
+          supplierName: "MakeMyTrip",
+          supplierLogo: "🟥",
+          pricePaise: 485000,
+          taxesPaise: 72000,
+          totalPaise: 485000,
+          deepLink: "https://www.makemytrip.com",
+          verificationState: "verified",
+          lastVerifiedAt: new Date().toISOString(),
+          trustScore: 90,
+          cabinBaggage: "7 kg",
+          checkInBaggage: "15 kg",
+          refundable: true,
+          cancellationFeePaise: 325000,
+          dateChangeFeePaise: 275000,
+          mealIncluded: false,
+          seatSelection: false,
+        },
+      ],
+    };
+  }
   const segment = flight.segments[0];
 
   const [selectedOfferForModal, setSelectedOfferForModal] = useState<any | null>(null);

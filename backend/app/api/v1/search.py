@@ -1,12 +1,13 @@
 """Search endpoints for FairFare API v1.
 
 Handles flight searches, journey results, and user search history.
-All flight data is simulated realistic Indian airline data.
+Supports dynamic route-specific flight generation across 75+ Indian and international airports.
 """
 
 from datetime import date, datetime, timedelta, timezone
+import hashlib
 import logging
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -27,202 +28,217 @@ router = APIRouter()
 DEMO_SEARCH_ID = UUID("10000000-0000-0000-0000-000000000001")
 
 
+def _get_route_profile(origin: str, destination: str) -> Dict[str, Any]:
+    """Calculate realistic flight parameters based on airport pair."""
+    intl_long = {"LHR", "CDG", "FRA", "AMS", "ZRH", "JFK", "SFO", "ORD", "LAX", "YYZ", "SYD", "MEL"}
+    intl_mid = {"DXB", "AUH", "DOH", "SIN", "BKK", "KUL", "HKG", "NRT", "ICN"}
+    intl_short = {"CMB", "DAC", "KTM", "MLE"}
+
+    is_origin_intl_long = origin in intl_long
+    is_dest_intl_long = destination in intl_long
+    is_origin_intl_mid = origin in intl_mid
+    is_dest_intl_mid = destination in intl_mid
+    is_origin_intl_short = origin in intl_short
+    is_dest_intl_short = destination in intl_short
+
+    # Europe / North America / Australia
+    if is_origin_intl_long or is_dest_intl_long:
+        if "JFK" in (origin, destination) or "SFO" in (origin, destination) or "LAX" in (origin, destination) or "ORD" in (origin, destination):
+            return {
+                "base_duration": 940, # ~15h 40m
+                "base_price_paise": 6800000, # ₹68,000
+                "airlines": [
+                    ("AI", "Air India", "Boeing 777-300ER"),
+                    ("EK", "Emirates", "Airbus A380-800"),
+                    ("QR", "Qatar Airways", "Airbus A350-1000"),
+                    ("BA", "British Airways", "Boeing 787-9"),
+                ],
+            }
+        return {
+            "base_duration": 550, # ~9h 10m
+            "base_price_paise": 4400000, # ₹44,000
+            "airlines": [
+                ("AI", "Air India", "Boeing 787-8 Dreamliner"),
+                ("BA", "British Airways", "Boeing 777-200ER"),
+                ("EK", "Emirates", "Boeing 777-300ER"),
+                ("QR", "Qatar Airways", "Airbus A350-900"),
+                ("LH", "Lufthansa", "Airbus A350-900"),
+            ],
+        }
+
+    # Middle East / Southeast Asia / East Asia
+    if is_origin_intl_mid or is_dest_intl_mid:
+        if "DXB" in (origin, destination) or "AUH" in (origin, destination) or "DOH" in (origin, destination):
+            return {
+                "base_duration": 235, # ~3h 55m
+                "base_price_paise": 1650000, # ₹16,500
+                "airlines": [
+                    ("EK", "Emirates", "Boeing 777-300ER"),
+                    ("6E", "IndiGo", "Airbus A321neo"),
+                    ("AI", "Air India", "Airbus A320neo"),
+                    ("QR", "Qatar Airways", "Boeing 787-8"),
+                ],
+            }
+        return {
+            "base_duration": 270, # ~4h 30m
+            "base_price_paise": 1950000, # ₹19,500
+            "airlines": [
+                ("SQ", "Singapore Airlines", "Airbus A350-900"),
+                ("6E", "IndiGo", "Airbus A321neo"),
+                ("AI", "Air India", "Airbus A320neo"),
+                ("TG", "Thai Airways", "Boeing 787-8"),
+            ],
+        }
+
+    # Neighboring International (Sri Lanka, Nepal, Maldives)
+    if is_origin_intl_short or is_dest_intl_short:
+        return {
+            "base_duration": 150,
+            "base_price_paise": 1200000, # ₹12,000
+            "airlines": [
+                ("6E", "IndiGo", "Airbus A320neo"),
+                ("AI", "Air India", "Airbus A320neo"),
+                ("UL", "SriLankan Airlines", "Airbus A321neo"),
+            ],
+        }
+
+    # Domestic short routes (e.g., MAA-BLR, BOM-GOI, DEL-JAI, etc.)
+    short_pairs = {
+        ("MAA", "BLR"), ("BLR", "MAA"),
+        ("BOM", "GOI"), ("GOI", "BOM"),
+        ("BOM", "PNQ"), ("PNQ", "BOM"),
+        ("DEL", "JAI"), ("JAI", "DEL"),
+        ("DEL", "IXC"), ("IXC", "DEL"),
+        ("BLR", "HYD"), ("HYD", "BLR"),
+        ("MAA", "CJB"), ("CJB", "MAA"),
+        ("BOM", "AMD"), ("AMD", "BOM"),
+    }
+    if (origin, destination) in short_pairs:
+        return {
+            "base_duration": 65, # ~1h 05m
+            "base_price_paise": 295000, # ₹2,950
+            "airlines": [
+                ("6E", "IndiGo", "Airbus A320neo"),
+                ("QP", "Akasa Air", "Boeing 737 MAX 8"),
+                ("AI", "Air India", "Airbus A320neo"),
+                ("SG", "SpiceJet", "Boeing 737-800"),
+            ],
+        }
+
+    # Domestic long routes (e.g. MAA-DEL, BLR-DEL, TRV-DEL, etc.)
+    long_domestic_pairs = {
+        ("MAA", "DEL"), ("DEL", "MAA"),
+        ("BLR", "DEL"), ("DEL", "BLR"),
+        ("CCU", "BOM"), ("BOM", "CCU"),
+        ("TRV", "DEL"), ("DEL", "TRV"),
+        ("COK", "DEL"), ("DEL", "COK"),
+        ("GAU", "DEL"), ("DEL", "GAU"),
+        ("SXR", "BOM"), ("BOM", "SXR"),
+    }
+    if (origin, destination) in long_domestic_pairs:
+        return {
+            "base_duration": 165, # ~2h 45m
+            "base_price_paise": 485000, # ₹4,850
+            "airlines": [
+                ("6E", "IndiGo", "Airbus A321neo"),
+                ("AI", "Air India", "Airbus A320neo"),
+                ("UK", "Vistara", "Airbus A321neo"),
+                ("QP", "Akasa Air", "Boeing 737 MAX 8"),
+                ("SG", "SpiceJet", "Boeing 737-800"),
+            ],
+        }
+
+    # Standard Domestic medium routes (e.g. DEL-BOM, BOM-BLR, etc.)
+    return {
+        "base_duration": 130, # ~2h 10m
+        "base_price_paise": 385000, # ₹3,850
+        "airlines": [
+            ("6E", "IndiGo", "Airbus A321neo"),
+            ("QP", "Akasa Air", "Boeing 737 MAX 8"),
+            ("AI", "Air India", "Airbus A320neo"),
+            ("UK", "Vistara", "Airbus A321neo"),
+            ("SG", "SpiceJet", "Boeing 737-800"),
+        ],
+    }
+
+
 def _generate_mock_journeys(
-    origin: str = "DEL",
-    destination: str = "BOM",
+    origin: str = "MAA",
+    destination: str = "DEL",
     travel_date: Optional[date] = None,
 ) -> List[JourneySchema]:
-    """Generate 10 realistic Indian flight journeys with accurate timings and prices."""
+    """Generate 10 realistic flight journeys with accurate timings and prices for the route."""
     base_date = travel_date or (date.today() + timedelta(days=7))
+    profile = _get_route_profile(origin, destination)
+    base_duration = profile["base_duration"]
+    base_price = profile["base_price_paise"]
+    airlines = profile["airlines"]
 
-    journey_specs = [
-        {
-            "id": UUID("10000000-0000-0000-0001-000000000001"),
-            "airline_code": "6E",
-            "airline_name": "IndiGo",
-            "flight_number": "6E-2001",
-            "aircraft_type": "Airbus A321neo",
-            "dep_hour": 6,
-            "dep_min": 15,
-            "arr_hour": 8,
-            "arr_min": 25,
-            "duration": 130,
-            "price_paise": 385000,  # ₹3,850.00
-            "stops": 0,
-        },
-        {
-            "id": UUID("10000000-0000-0000-0001-000000000002"),
-            "airline_code": "QP",
-            "airline_name": "Akasa Air",
-            "flight_number": "QP-1102",
-            "aircraft_type": "Boeing 737 MAX 8",
-            "dep_hour": 7,
-            "dep_min": 45,
-            "arr_hour": 10,
-            "arr_min": 0,
-            "duration": 135,
-            "price_paise": 362000,  # ₹3,620.00 (Cheapest)
-            "stops": 0,
-        },
-        {
-            "id": UUID("10000000-0000-0000-0001-000000000003"),
-            "airline_code": "AI",
-            "airline_name": "Air India",
-            "flight_number": "AI-865",
-            "aircraft_type": "Boeing 787-8 Dreamliner",
-            "dep_hour": 9,
-            "dep_min": 30,
-            "arr_hour": 11,
-            "arr_min": 50,
-            "duration": 140,
-            "price_paise": 490000,  # ₹4,900.00
-            "stops": 0,
-        },
-        {
-            "id": UUID("10000000-0000-0000-0001-000000000004"),
-            "airline_code": "6E",
-            "airline_name": "IndiGo",
-            "flight_number": "6E-5318",
-            "aircraft_type": "Airbus A320neo",
-            "dep_hour": 11,
-            "dep_min": 15,
-            "arr_hour": 13,
-            "arr_min": 30,
-            "duration": 135,
-            "price_paise": 420000,  # ₹4,200.00
-            "stops": 0,
-        },
-        {
-            "id": UUID("10000000-0000-0000-0001-000000000005"),
-            "airline_code": "SG",
-            "airline_name": "SpiceJet",
-            "flight_number": "SG-8169",
-            "aircraft_type": "Boeing 737-800",
-            "dep_hour": 14,
-            "dep_min": 0,
-            "arr_hour": 16,
-            "arr_min": 15,
-            "duration": 135,
-            "price_paise": 375000,  # ₹3,750.00
-            "stops": 0,
-        },
-        {
-            "id": UUID("10000000-0000-0000-0001-000000000006"),
-            "airline_code": "AI",
-            "airline_name": "Air India",
-            "flight_number": "AI-678",
-            "aircraft_type": "Airbus A320neo",
-            "dep_hour": 15,
-            "dep_min": 45,
-            "arr_hour": 18,
-            "arr_min": 0,
-            "duration": 135,
-            "price_paise": 475000,  # ₹4,750.00
-            "stops": 0,
-        },
-        {
-            "id": UUID("10000000-0000-0000-0001-000000000007"),
-            "airline_code": "UK",
-            "airline_name": "Vistara",
-            "flight_number": "UK-955",
-            "aircraft_type": "Airbus A321neo",
-            "dep_hour": 17,
-            "dep_min": 45,
-            "arr_hour": 20,
-            "arr_min": 0,
-            "duration": 135,
-            "price_paise": 560000,  # ₹5,600.00
-            "stops": 0,
-        },
-        {
-            "id": UUID("10000000-0000-0000-0001-000000000008"),
-            "airline_code": "SG",
-            "airline_name": "SpiceJet",
-            "flight_number": "SG-8709",
-            "aircraft_type": "Boeing 737-800",
-            "dep_hour": 18,
-            "dep_min": 30,
-            "arr_hour": 20,
-            "arr_min": 50,
-            "duration": 140,
-            "price_paise": 395000,  # ₹3,950.00
-            "stops": 0,
-        },
-        {
-            "id": UUID("10000000-0000-0000-0001-000000000009"),
-            "airline_code": "QP",
-            "airline_name": "Akasa Air",
-            "flight_number": "QP-1301",
-            "aircraft_type": "Boeing 737 MAX 8",
-            "dep_hour": 20,
-            "dep_min": 30,
-            "arr_hour": 22,
-            "arr_min": 45,
-            "duration": 135,
-            "price_paise": 380000,  # ₹3,800.00
-            "stops": 0,
-        },
-        {
-            "id": UUID("10000000-0000-0000-0001-000000000010"),
-            "airline_code": "6E",
-            "airline_name": "IndiGo",
-            "flight_number": "6E-2055",
-            "aircraft_type": "Airbus A321neo",
-            "dep_hour": 21,
-            "dep_min": 45,
-            "arr_hour": 23,
-            "arr_min": 55,
-            "duration": 130,
-            "price_paise": 410000,  # ₹4,100.00
-            "stops": 0,
-        },
+    departure_slots = [
+        (6, 0, 0, 0.98),    # 06:00, non-stop, early saver
+        (7, 30, 0, 0.92),   # 07:30, non-stop, popular morning
+        (9, 15, 0, 1.05),   # 09:15, non-stop, business peak
+        (11, 30, 0, 1.00),  # 11:30, non-stop
+        (13, 45, 1, 0.88),  # 13:45, 1-stop (cheaper option)
+        (15, 15, 0, 1.02),  # 15:15, non-stop, afternoon
+        (17, 30, 0, 1.15),  # 17:30, evening peak
+        (19, 0, 0, 1.08),   # 19:00, evening
+        (20, 45, 0, 0.95),  # 20:45, night
+        (22, 30, 0, 0.89),  # 22:30, late night cheapest
     ]
 
     journeys: List[JourneySchema] = []
-    for spec in journey_specs:
+
+    for i, (dep_h, dep_m, stops, price_mult) in enumerate(departure_slots):
+        airline_code, airline_name, aircraft = airlines[i % len(airlines)]
+
+        # Unique deterministic flight number
+        num_seed = int(hashlib.md5(f"{origin}{destination}{airline_code}{i}".encode()).hexdigest()[:4], 16) % 900 + 100
+        flight_number = f"{airline_code}-{num_seed}"
+
+        # Duration adjusts if 1-stop
+        actual_duration = base_duration if stops == 0 else (base_duration + 85)
+
         dep_time = datetime(
             base_date.year,
             base_date.month,
             base_date.day,
-            spec["dep_hour"],
-            spec["dep_min"],
+            dep_h,
+            dep_m,
             tzinfo=timezone.utc,
         )
-        arr_time = datetime(
-            base_date.year,
-            base_date.month,
-            base_date.day,
-            spec["arr_hour"],
-            spec["arr_min"],
-            tzinfo=timezone.utc,
-        )
+        arr_time = dep_time + timedelta(minutes=actual_duration)
+
+        calculated_price = int(base_price * price_mult)
 
         segment = FlightSegmentSchema(
-            flight_number=spec["flight_number"],
-            airline_code=spec["airline_code"],
-            airline_name=spec["airline_name"],
-            aircraft_type=spec["aircraft_type"],
+            flight_number=flight_number,
+            airline_code=airline_code,
+            airline_name=airline_name,
+            aircraft_type=aircraft,
             departure_airport=origin,
             departure_time=dep_time,
             arrival_airport=destination,
             arrival_time=arr_time,
-            duration_minutes=spec["duration"],
+            duration_minutes=actual_duration,
             cabin_class="economy",
         )
 
+        journey_id = UUID(f"10000000-0000-0000-0001-{i+1:012d}")
+
         journeys.append(
             JourneySchema(
-                id=spec["id"],
-                airline_code=spec["airline_code"],
-                airline_name=spec["airline_name"],
+                id=journey_id,
+                airline_code=airline_code,
+                airline_name=airline_name,
                 departure_airport=origin,
                 arrival_airport=destination,
                 departure_time=dep_time,
                 arrival_time=arr_time,
-                duration_minutes=spec["duration"],
-                stops=spec["stops"],
+                duration_minutes=actual_duration,
+                stops=stops,
                 segments=[segment],
-                cheapest_price_paise=spec["price_paise"],
+                cheapest_price_paise=calculated_price,
             )
         )
 
@@ -260,8 +276,8 @@ async def create_search(
     # Store search query parameters in memory for subsequent results retrieval
     _active_searches[search_id] = {
         "id": search_id,
-        "origin": request.origin,
-        "destination": request.destination,
+        "origin": request.origin.upper().strip(),
+        "destination": request.destination.upper().strip(),
         "departure_date": request.departure_date,
         "return_date": request.return_date,
         "adults": request.adults,
@@ -277,8 +293,8 @@ async def create_search(
         status="completed",
         created_at=now,
         result_count=10,
-        origin=request.origin,
-        destination=request.destination,
+        origin=request.origin.upper().strip(),
+        destination=request.destination.upper().strip(),
         departure_date=request.departure_date,
         return_date=request.return_date,
         adults=request.adults,
@@ -296,59 +312,48 @@ async def create_search(
 async def get_search_history(
     current_user=Depends(get_optional_user),
 ) -> List[SearchHistoryItem]:
-    """Return 5 realistic simulated flight search history records."""
+    """Return realistic flight search history records."""
     now = datetime.now(timezone.utc)
     today = date.today()
 
     return [
         SearchHistoryItem(
             id=UUID("20000000-0000-0000-0000-000000000001"),
-            origin="DEL",
-            destination="BOM",
+            origin="MAA",
+            destination="DEL",
             departure_date=today + timedelta(days=5),
-            created_at=now - timedelta(hours=2),
-            result_count=10,
-            trip_type="one_way",
-            cabin_class="economy",
-        ),
-        SearchHistoryItem(
-            id=UUID("20000000-0000-0000-0000-000000000002"),
-            origin="BOM",
-            destination="BLR",
-            departure_date=today + timedelta(days=12),
-            created_at=now - timedelta(days=1),
-            result_count=8,
-            trip_type="one_way",
-            cabin_class="economy",
-        ),
-        SearchHistoryItem(
-            id=UUID("20000000-0000-0000-0000-000000000003"),
-            origin="DEL",
-            destination="BLR",
-            departure_date=today + timedelta(days=18),
-            return_date=today + timedelta(days=22),
-            created_at=now - timedelta(days=2),
+            created_at=now - timedelta(hours=1),
             result_count=10,
             trip_type="round_trip",
             cabin_class="economy",
         ),
         SearchHistoryItem(
-            id=UUID("20000000-0000-0000-0000-000000000004"),
+            id=UUID("20000000-0000-0000-0000-000000000002"),
             origin="DEL",
-            destination="GOI",
-            departure_date=today + timedelta(days=30),
-            created_at=now - timedelta(days=4),
-            result_count=7,
+            destination="BOM",
+            departure_date=today + timedelta(days=7),
+            created_at=now - timedelta(hours=3),
+            result_count=10,
             trip_type="one_way",
             cabin_class="economy",
         ),
         SearchHistoryItem(
-            id=UUID("20000000-0000-0000-0000-000000000005"),
+            id=UUID("20000000-0000-0000-0000-000000000003"),
+            origin="BLR",
+            destination="DXB",
+            departure_date=today + timedelta(days=14),
+            created_at=now - timedelta(days=1),
+            result_count=8,
+            trip_type="round_trip",
+            cabin_class="economy",
+        ),
+        SearchHistoryItem(
+            id=UUID("20000000-0000-0000-0000-000000000004"),
             origin="BOM",
-            destination="HYD",
-            departure_date=today + timedelta(days=8),
-            created_at=now - timedelta(days=6),
-            result_count=9,
+            destination="GOI",
+            departure_date=today + timedelta(days=20),
+            created_at=now - timedelta(days=3),
+            result_count=10,
             trip_type="one_way",
             cabin_class="economy",
         ),
@@ -365,10 +370,10 @@ async def get_search_results(
     search_id: UUID,
     sort_by: Optional[str] = Query(default="price", description="Sort by: price, duration, departure"),
 ) -> List[JourneySchema]:
-    """Retrieve 10 simulated Indian airline flight options for the given search query."""
+    """Retrieve simulated airline flight options for the given search query."""
     search_info = _active_searches.get(search_id)
-    origin = search_info["origin"] if search_info else "DEL"
-    destination = search_info["destination"] if search_info else "BOM"
+    origin = search_info["origin"] if search_info else "MAA"
+    destination = search_info["destination"] if search_info else "DEL"
     dep_date = search_info["departure_date"] if search_info else (date.today() + timedelta(days=7))
 
     journeys = _generate_mock_journeys(origin=origin, destination=destination, travel_date=dep_date)
@@ -380,5 +385,5 @@ async def get_search_results(
     else:  # default price ASC
         journeys.sort(key=lambda j: j.cheapest_price_paise)
 
-    logger.info("Returning %d journey results for search %s", len(journeys), search_id)
+    logger.info("Returning %d journey results for route %s -> %s", len(journeys), origin, destination)
     return journeys

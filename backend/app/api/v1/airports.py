@@ -1,6 +1,6 @@
 """Airport lookup and autocomplete endpoints for FairFare API v1.
 
-Provides search and listing for 60+ Indian and international airports
+Provides search and listing for 75+ Indian and international airports
 with IATA codes, city names, and timezones.
 """
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Comprehensive catalog of 60+ Indian and major international airports
+# Comprehensive catalog of 75+ Indian and major international airports
 AIRPORTS_CATALOG: List[Dict[str, Any]] = [
     # Top Tier 1 Indian Metro Hubs
     {"code": "DEL", "name": "Indira Gandhi International Airport", "city": "New Delhi", "country": "India", "timezone": "Asia/Kolkata"},
@@ -74,33 +74,40 @@ AIRPORTS_CATALOG: List[Dict[str, Any]] = [
 
     # Top International Destinations from India
     {"code": "DXB", "name": "Dubai International Airport", "city": "Dubai", "country": "United Arab Emirates", "timezone": "Asia/Dubai"},
+    {"code": "AUH", "name": "Zayed International Airport", "city": "Abu Dhabi", "country": "United Arab Emirates", "timezone": "Asia/Dubai"},
+    {"code": "DOH", "name": "Hamad International Airport", "city": "Doha", "country": "Qatar", "timezone": "Asia/Qatar"},
     {"code": "SIN", "name": "Singapore Changi Airport", "city": "Singapore", "country": "Singapore", "timezone": "Asia/Singapore"},
     {"code": "BKK", "name": "Suvarnabhumi Airport", "city": "Bangkok", "country": "Thailand", "timezone": "Asia/Bangkok"},
+    {"code": "KUL", "name": "Kuala Lumpur International Airport", "city": "Kuala Lumpur", "country": "Malaysia", "timezone": "Asia/Kuala_Lumpur"},
     {"code": "LHR", "name": "London Heathrow Airport", "city": "London", "country": "United Kingdom", "timezone": "Europe/London"},
+    {"code": "CDG", "name": "Charles de Gaulle Airport", "city": "Paris", "country": "France", "timezone": "Europe/Paris"},
+    {"code": "FRA", "name": "Frankfurt Airport", "city": "Frankfurt", "country": "Germany", "timezone": "Europe/Berlin"},
+    {"code": "AMS", "name": "Amsterdam Airport Schiphol", "city": "Amsterdam", "country": "Netherlands", "timezone": "Europe/Amsterdam"},
+    {"code": "ZRH", "name": "Zurich Airport", "city": "Zurich", "country": "Switzerland", "timezone": "Europe/Zurich"},
     {"code": "JFK", "name": "John F. Kennedy International Airport", "city": "New York", "country": "United States", "timezone": "America/New_York"},
     {"code": "SFO", "name": "San Francisco International Airport", "city": "San Francisco", "country": "United States", "timezone": "America/Los_Angeles"},
+    {"code": "ORD", "name": "O'Hare International Airport", "city": "Chicago", "country": "United States", "timezone": "America/Chicago"},
+    {"code": "LAX", "name": "Los Angeles International Airport", "city": "Los Angeles", "country": "United States", "timezone": "America/Los_Angeles"},
+    {"code": "YYZ", "name": "Toronto Pearson International Airport", "city": "Toronto", "country": "Canada", "timezone": "America/Toronto"},
+    {"code": "SYD", "name": "Sydney Kingsford Smith Airport", "city": "Sydney", "country": "Australia", "timezone": "Australia/Sydney"},
+    {"code": "MEL", "name": "Melbourne Airport", "city": "Melbourne", "country": "Australia", "timezone": "Australia/Melbourne"},
     {"code": "HKG", "name": "Hong Kong International Airport", "city": "Hong Kong", "country": "Hong Kong", "timezone": "Asia/Hong_Kong"},
     {"code": "NRT", "name": "Narita International Airport", "city": "Tokyo", "country": "Japan", "timezone": "Asia/Tokyo"},
     {"code": "ICN", "name": "Incheon International Airport", "city": "Seoul", "country": "South Korea", "timezone": "Asia/Seoul"},
-    {"code": "KUL", "name": "Kuala Lumpur International Airport", "city": "Kuala Lumpur", "country": "Malaysia", "timezone": "Asia/Kuala_Lumpur"},
     {"code": "CMB", "name": "Bandaranaike International Airport", "city": "Colombo", "country": "Sri Lanka", "timezone": "Asia/Colombo"},
     {"code": "DAC", "name": "Hazrat Shahjalal International Airport", "city": "Dhaka", "country": "Bangladesh", "timezone": "Asia/Dhaka"},
     {"code": "KTM", "name": "Tribhuvan International Airport", "city": "Kathmandu", "country": "Nepal", "timezone": "Asia/Kathmandu"},
     {"code": "MLE", "name": "Velana International Airport", "city": "Male", "country": "Maldives", "timezone": "Indian/Maldives"},
-    {"code": "DOH", "name": "Hamad International Airport", "city": "Doha", "country": "Qatar", "timezone": "Asia/Qatar"},
-    {"code": "AUH", "name": "Zayed International Airport", "city": "Abu Dhabi", "country": "United Arab Emirates", "timezone": "Asia/Dubai"},
-    {"code": "CDG", "name": "Charles de Gaulle Airport", "city": "Paris", "country": "France", "timezone": "Europe/Paris"},
-    {"code": "FRA", "name": "Frankfurt Airport", "city": "Frankfurt", "country": "Germany", "timezone": "Europe/Berlin"},
 ]
 
-POPULAR_AIRPORT_CODES = ["DEL", "BOM", "BLR", "HYD", "MAA", "CCU", "GOI", "COK", "AMD", "PNQ"]
+POPULAR_AIRPORT_CODES = ["DEL", "BOM", "BLR", "HYD", "MAA", "CCU", "GOI", "COK", "AMD", "PNQ", "DXB", "SIN", "LHR"]
 
 
 @router.get(
     "/search",
     response_model=List[Dict[str, Any]],
     summary="Search airports by code or city name",
-    description="Search 60+ airports by IATA code or city name. Case-insensitive, returns up to 10 matches.",
+    description="Search 75+ airports by IATA code or city name. Case-insensitive, returns up to 20 matches.",
 )
 async def search_airports(
     q: str = Query(..., min_length=1, description="Search query (IATA code, city name, or airport name)"),
@@ -121,31 +128,42 @@ async def search_airports(
             continue
         if airport["code"].lower().startswith(query) or airport["city"].lower().startswith(query):
             matches.append(airport)
-            if len(matches) >= 10:
+            if len(matches) >= 20:
                 break
 
     # Priority 3: City or name contains query
-    if len(matches) < 10:
+    if len(matches) < 20:
         for airport in AIRPORTS_CATALOG:
             if airport in matches:
                 continue
-            if query in airport["city"].lower() or query in airport["name"].lower():
+            if query in airport["city"].lower() or query in airport["name"].lower() or query in airport["country"].lower():
                 matches.append(airport)
-                if len(matches) >= 10:
+                if len(matches) >= 20:
                     break
 
     logger.debug("Airport search for '%s' returned %d results", q, len(matches))
-    return matches[:10]
+    return matches[:20]
 
 
 @router.get(
     "/popular",
     response_model=List[Dict[str, Any]],
-    summary="Get top 10 popular Indian airports",
-    description="Retrieve the 10 most popular commercial aviation hubs in India.",
+    summary="Get top popular airports",
+    description="Retrieve the popular commercial aviation hubs.",
 )
 async def get_popular_airports() -> List[Dict[str, Any]]:
-    """Return top 10 Indian airports for quick selection."""
+    """Return top popular airports for quick selection."""
     code_map = {a["code"]: a for a in AIRPORTS_CATALOG}
     popular = [code_map[code] for code in POPULAR_AIRPORT_CODES if code in code_map]
     return popular
+
+
+@router.get(
+    "/all",
+    response_model=List[Dict[str, Any]],
+    summary="Get all airports catalog",
+    description="Retrieve the entire catalog of 75+ domestic and international airports.",
+)
+async def get_all_airports() -> List[Dict[str, Any]]:
+    """Return complete airport catalog."""
+    return AIRPORTS_CATALOG

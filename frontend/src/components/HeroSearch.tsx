@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Airport, TripType, CabinClass } from '../types/flight';
 import { majorAirports } from '../data/mockFlights';
-import { ArrowLeftRight, Calendar, Search, X, Check } from 'lucide-react';
+import { ArrowLeftRight, Calendar, Search, X, Check, Globe, Building2 } from 'lucide-react';
 
 interface HeroSearchProps {
   tripType: TripType;
@@ -50,6 +50,7 @@ export function HeroSearch({
   const [passengersOpen, setPassengersOpen] = useState(false);
   const [originQuery, setOriginQuery] = useState('');
   const [destQuery, setDestQuery] = useState('');
+  const [airportFilterTab, setAirportFilterTab] = useState<'all' | 'domestic' | 'international'>('all');
   const [isSwapping, setIsSwapping] = useState(false);
 
   const originContainerRef = useRef<HTMLDivElement>(null);
@@ -83,25 +84,42 @@ export function HeroSearch({
     setTimeout(() => setIsSwapping(false), 240);
   };
 
-  const filteredOriginAirports = majorAirports.filter(
-    (a) =>
-      a.code !== destination.code &&
-      (a.code.toLowerCase().includes(originQuery.toLowerCase()) ||
-        a.city.toLowerCase().includes(originQuery.toLowerCase()) ||
-        a.name.toLowerCase().includes(originQuery.toLowerCase()))
-  );
+  // Filter airports for Origin
+  const filteredOriginAirports = useMemo(() => {
+    const q = originQuery.trim().toLowerCase();
+    return majorAirports.filter((a) => {
+      if (a.code === destination.code) return false;
+      if (airportFilterTab === 'domestic' && a.country !== 'India') return false;
+      if (airportFilterTab === 'international' && a.country === 'India') return false;
+      if (!q) return true;
+      return (
+        a.code.toLowerCase().includes(q) ||
+        a.city.toLowerCase().includes(q) ||
+        a.name.toLowerCase().includes(q) ||
+        a.country.toLowerCase().includes(q)
+      );
+    });
+  }, [originQuery, destination.code, airportFilterTab]);
 
-  const filteredDestAirports = majorAirports.filter(
-    (a) =>
-      a.code !== origin.code &&
-      (a.code.toLowerCase().includes(destQuery.toLowerCase()) ||
-        a.city.toLowerCase().includes(destQuery.toLowerCase()) ||
-        a.name.toLowerCase().includes(destQuery.toLowerCase()))
-  );
+  // Filter airports for Destination
+  const filteredDestAirports = useMemo(() => {
+    const q = destQuery.trim().toLowerCase();
+    return majorAirports.filter((a) => {
+      if (a.code === origin.code) return false;
+      if (airportFilterTab === 'domestic' && a.country !== 'India') return false;
+      if (airportFilterTab === 'international' && a.country === 'India') return false;
+      if (!q) return true;
+      return (
+        a.code.toLowerCase().includes(q) ||
+        a.city.toLowerCase().includes(q) ||
+        a.name.toLowerCase().includes(q) ||
+        a.country.toLowerCase().includes(q)
+      );
+    });
+  }, [destQuery, origin.code, airportFilterTab]);
 
   const totalPassengers = passengers.adults + passengers.children + passengers.infants;
 
-  // Format ISO date (YYYY-MM-DD) to MM/DD/YYYY for visual fidelity
   const formatDisplayDate = (isoStr: string) => {
     if (!isoStr) return '';
     const parts = isoStr.split('-');
@@ -174,7 +192,7 @@ export function HeroSearch({
 
           <div className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>GDS & NDC availability (demo)</span>
+            <span>Live Metasearch Engine · 75+ Hubs</span>
           </div>
         </div>
 
@@ -209,44 +227,95 @@ export function HeroSearch({
 
               {/* Origin Popover */}
               {originOpen && (
-                <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in zoom-in-95">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                      Select Origin
+                <div className="absolute top-full left-0 mt-2 w-88 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 p-3.5 z-50 animate-in fade-in zoom-in-95">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2.5">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Select Departure Airport
                     </span>
                     <button onClick={() => setOriginOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
+
+                  {/* Category Pills */}
+                  <div className="flex items-center gap-1.5 mb-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setAirportFilterTab('all')}
+                      className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-all ${
+                        airportFilterTab === 'all'
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      All (75+)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAirportFilterTab('domestic')}
+                      className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-all flex items-center gap-1 ${
+                        airportFilterTab === 'domestic'
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <Building2 className="w-3 h-3" />
+                      <span>Domestic India</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAirportFilterTab('international')}
+                      className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-all flex items-center gap-1 ${
+                        airportFilterTab === 'international'
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <Globe className="w-3 h-3" />
+                      <span>International</span>
+                    </button>
+                  </div>
+
                   <input
                     type="text"
                     autoFocus
                     ref={originInputRef}
-                    placeholder="Search city or airport code..."
+                    placeholder="Search city, code, or airport (e.g. MAA, Delhi, London)..."
                     value={originQuery}
                     onChange={(e) => setOriginQuery(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 mb-2 outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 mb-2.5 outline-none focus:border-blue-500 focus:bg-white"
                   />
-                  <div className="max-h-52 overflow-y-auto space-y-1">
-                    {filteredOriginAirports.map((a) => (
-                      <button
-                        key={a.code}
-                        type="button"
-                        onClick={() => {
-                          onOriginChange(a);
-                          setOriginOpen(false);
-                        }}
-                        className="w-full text-left p-2 rounded-xl text-xs hover:bg-slate-50 flex items-center justify-between transition-colors"
-                      >
-                        <div>
-                          <div className="font-semibold text-slate-900">{a.city}</div>
-                          <div className="text-[10px] text-slate-400">{a.name}</div>
-                        </div>
-                        <span className="font-mono font-bold text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
-                          {a.code}
-                        </span>
-                      </button>
-                    ))}
+
+                  <div className="max-h-56 overflow-y-auto space-y-1">
+                    {filteredOriginAirports.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-400">
+                        No airports match &ldquo;{originQuery}&rdquo;
+                      </div>
+                    ) : (
+                      filteredOriginAirports.map((a) => (
+                        <button
+                          key={a.code}
+                          type="button"
+                          onClick={() => {
+                            onOriginChange(a);
+                            setOriginOpen(false);
+                            setOriginQuery('');
+                          }}
+                          className="w-full text-left p-2 rounded-xl text-xs hover:bg-slate-50 flex items-center justify-between transition-colors"
+                        >
+                          <div>
+                            <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                              <span>{a.city}</span>
+                              <span className="text-[10px] text-slate-400 font-normal">({a.country})</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 truncate max-w-[240px]">{a.name}</div>
+                          </div>
+                          <span className="font-mono font-bold text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
+                            {a.code}
+                          </span>
+                        </button>
+                      ))
+                    )}
                   </div>
                 </div>
               )}
@@ -292,43 +361,94 @@ export function HeroSearch({
 
               {/* Destination Popover */}
               {destOpen && (
-                <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in zoom-in-95">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                      Select Destination
+                <div className="absolute top-full right-0 mt-2 w-88 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 p-3.5 z-50 animate-in fade-in zoom-in-95">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2.5">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Select Destination Airport
                     </span>
                     <button onClick={() => setDestOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
-                      <X className="w-3.5 h-3.5" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
+
+                  {/* Category Pills */}
+                  <div className="flex items-center gap-1.5 mb-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setAirportFilterTab('all')}
+                      className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-all ${
+                        airportFilterTab === 'all'
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      All (75+)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAirportFilterTab('domestic')}
+                      className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-all flex items-center gap-1 ${
+                        airportFilterTab === 'domestic'
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <Building2 className="w-3 h-3" />
+                      <span>Domestic India</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAirportFilterTab('international')}
+                      className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-all flex items-center gap-1 ${
+                        airportFilterTab === 'international'
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <Globe className="w-3 h-3" />
+                      <span>International</span>
+                    </button>
+                  </div>
+
                   <input
                     type="text"
                     autoFocus
-                    placeholder="Search city or airport code..."
+                    placeholder="Search city, code, or airport (e.g. DEL, BOM, DXB)..."
                     value={destQuery}
                     onChange={(e) => setDestQuery(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 mb-2 outline-none focus:border-blue-500 focus:bg-white"
+                    className="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 mb-2.5 outline-none focus:border-blue-500 focus:bg-white"
                   />
-                  <div className="max-h-52 overflow-y-auto space-y-1">
-                    {filteredDestAirports.map((a) => (
-                      <button
-                        key={a.code}
-                        type="button"
-                        onClick={() => {
-                          onDestinationChange(a);
-                          setDestOpen(false);
-                        }}
-                        className="w-full text-left p-2 rounded-xl text-xs hover:bg-slate-50 flex items-center justify-between transition-colors"
-                      >
-                        <div>
-                          <div className="font-semibold text-slate-900">{a.city}</div>
-                          <div className="text-[10px] text-slate-400">{a.name}</div>
-                        </div>
-                        <span className="font-mono font-bold text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
-                          {a.code}
-                        </span>
-                      </button>
-                    ))}
+
+                  <div className="max-h-56 overflow-y-auto space-y-1">
+                    {filteredDestAirports.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-400">
+                        No airports match &ldquo;{destQuery}&rdquo;
+                      </div>
+                    ) : (
+                      filteredDestAirports.map((a) => (
+                        <button
+                          key={a.code}
+                          type="button"
+                          onClick={() => {
+                            onDestinationChange(a);
+                            setDestOpen(false);
+                            setDestQuery('');
+                          }}
+                          className="w-full text-left p-2 rounded-xl text-xs hover:bg-slate-50 flex items-center justify-between transition-colors"
+                        >
+                          <div>
+                            <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                              <span>{a.city}</span>
+                              <span className="text-[10px] text-slate-400 font-normal">({a.country})</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 truncate max-w-[240px]">{a.name}</div>
+                          </div>
+                          <span className="font-mono font-bold text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
+                            {a.code}
+                          </span>
+                        </button>
+                      ))
+                    )}
                   </div>
                 </div>
               )}

@@ -30,9 +30,96 @@ function SearchResultsContent() {
   const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  // Filter & Sort flights
+  // Filter & Sort flights specifically for origin -> destination
+  const allFlights = useMemo(() => {
+    const orig = origin.toUpperCase();
+    const dest = destination.toUpperCase();
+    if (orig === "DEL" && dest === "BOM") {
+      return mockFlights;
+    }
+    const airlinesList = [
+      { code: "6E", name: "IndiGo" },
+      { code: "AI", name: "Air India" },
+      { code: "UK", name: "Vistara" },
+      { code: "QP", name: "Akasa Air" },
+      { code: "SG", name: "SpiceJet" },
+    ];
+    return airlinesList.map((al, idx) => {
+      const depHour = 6 + idx * 3;
+      const depTime = `${String(depHour).padStart(2, "0")}:15`;
+      const arrHour = (depHour + 2) % 24;
+      const arrTime = `${String(arrHour).padStart(2, "0")}:45`;
+      const basePaise = (4200 + idx * 450) * 100;
+      return {
+        id: `fl-${orig.toLowerCase()}-${dest.toLowerCase()}-${idx + 1}`,
+        segments: [
+          {
+            airlineCode: al.code,
+            airlineName: al.name,
+            flightNumber: `${al.code} ${idx * 120 + 201}`,
+            aircraft: "Airbus A321neo",
+            departureAirport: orig,
+            departureTime: depTime,
+            arrivalAirport: dest,
+            arrivalTime: arrTime,
+            durationMinutes: 150,
+          },
+        ],
+        totalDurationMinutes: 150,
+        stops: idx === 3 ? 1 : 0,
+        departureTime: depTime,
+        arrivalTime: arrTime,
+        departureAirport: orig,
+        arrivalAirport: dest,
+        cheapestPaise: basePaise,
+        cheapestTrustedPaise: basePaise + 15000,
+        isSimulated: true,
+        offers: [
+          {
+            supplierId: "cleartrip",
+            supplierName: "Cleartrip",
+            supplierLogo: "🟩",
+            pricePaise: basePaise,
+            taxesPaise: Math.round(basePaise * 0.14),
+            totalPaise: basePaise,
+            deepLink: `https://www.cleartrip.com`,
+            verificationState: "verified" as const,
+            lastVerifiedAt: new Date().toISOString(),
+            trustScore: 92,
+            cabinBaggage: "7 kg",
+            checkInBaggage: "15 kg",
+            refundable: true,
+            cancellationFeePaise: 300000,
+            dateChangeFeePaise: 250000,
+            mealIncluded: false,
+            seatSelection: false,
+          },
+          {
+            supplierId: "makemytrip",
+            supplierName: "MakeMyTrip",
+            supplierLogo: "🟥",
+            pricePaise: basePaise + 5000,
+            taxesPaise: Math.round(basePaise * 0.14),
+            totalPaise: basePaise + 5000,
+            deepLink: `https://www.makemytrip.com`,
+            verificationState: "verified" as const,
+            lastVerifiedAt: new Date().toISOString(),
+            trustScore: 90,
+            cabinBaggage: "7 kg",
+            checkInBaggage: "15 kg",
+            refundable: true,
+            cancellationFeePaise: 325000,
+            dateChangeFeePaise: 275000,
+            mealIncluded: false,
+            seatSelection: false,
+          },
+        ],
+      };
+    });
+  }, [origin, destination]);
+
   const filteredFlights = useMemo(() => {
-    return mockFlights.filter((flight) => {
+    return allFlights.filter((flight) => {
       // Filter by max price
       if (flight.cheapestPaise > maxPrice) return false;
 
