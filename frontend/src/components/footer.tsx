@@ -28,16 +28,16 @@ const COLUMNS = [
 
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-[var(--border-hairline)] bg-[var(--bg-surface)]">
+    <footer className="glass-bar mt-24">
       <div className="mx-auto max-w-[1200px] px-4 pb-10 pt-14 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-10 pb-12 md:grid-cols-12">
           <div className="space-y-4 md:col-span-5">
             <BrandMark />
             <p className="max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">
               An independent flight metasearch for India. We compare airlines and authorised booking sites and show
-              the true total — with zero FareFair markup.
+              the true total — with zero FairFare markup.
             </p>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]">
+            <div className="inline-flex items-center gap-2 rounded-full glass-card px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]">
               <ShieldCheck className="h-3.5 w-3.5 text-[var(--semantic-trust)]" />
               No booking fees, no paid placement
             </div>
@@ -68,14 +68,14 @@ export function Footer() {
               Important
             </h2>
             <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">
-              FareFair is a comparison service. We don&apos;t sell tickets or take payments — every booking is
+              FairFare is a comparison service. We don&apos;t sell tickets or take payments — every booking is
               completed with the airline or an authorised seller.
             </p>
           </div>
         </div>
 
         <div className="flex flex-col gap-3 border-t border-[var(--border-hairline)] pt-6 text-xs text-[var(--text-muted)] sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} FareFair Metasearch India</p>
+          <p>© {new Date().getFullYear()} FairFare Metasearch India</p>
           <div className="flex items-center gap-5">
             <Link href="/privacy" className="transition-colors hover:text-[var(--text-primary)]">
               Privacy

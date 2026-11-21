@@ -32,7 +32,7 @@ export default function FlightDetailPage({ params }: { params: { id: string } })
   const bestOffer = sortedOffers[0];
 
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
 
       <main id="main" className="max-w-5xl mx-auto px-4 sm:px-8 py-10 flex-1 w-full">
@@ -46,7 +46,7 @@ export default function FlightDetailPage({ params }: { params: { id: string } })
         </Link>
 
         {/* Flight Overview Header Card */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-sm mb-8">
+        <div className="glass-card rounded-2xl p-6 sm:p-8 shadow-sm mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
             <div>
               <div className="flex items-center gap-2">
@@ -99,14 +99,14 @@ export default function FlightDetailPage({ params }: { params: { id: string } })
         </div>
 
         {/* Multi-Supplier Comparison Section */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-sm mb-8">
+        <div className="glass-card rounded-2xl p-6 sm:p-8 shadow-sm mb-8">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
             <div>
               <h2 className="text-base font-bold text-navy uppercase tracking-wider">
                 Compare All {flight.offers.length} Booking Sellers
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Transparent final pricing with no FareFair markup
+                Transparent final pricing with no FairFare markup
               </p>
             </div>
             <span className="text-xs font-bold text-teal-800 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">

@@ -20,7 +20,8 @@
 
   body {
     min-height: 100vh;
-    background-color: var(--bg-canvas);
+    /* Transparent so the fixed ambient light field shows through */
+    background-color: transparent;
     color: var(--text-primary);
     overflow-x: clip;
     text-rendering: optimizeLegibility;

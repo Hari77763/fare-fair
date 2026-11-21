@@ -117,7 +117,7 @@ export function SeatMapModal({ isOpen, onClose, flight, tier, currency, onConfir
         role="dialog"
         aria-modal="true"
         aria-labelledby="seatmap-title"
-        className={`relative flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-t-[24px] bg-[var(--bg-surface)] shadow-[var(--shadow-float)] transition-[opacity,transform] duration-200 sm:rounded-[20px] ${
+        className={`glass glass-strong flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-t-[28px] shadow-[var(--shadow-float)] transition-[opacity,transform] duration-200 sm:rounded-[20px] ${
           closing ? 'translate-y-4 opacity-0' : 'animate-sheet-up sm:animate-modal-in'
         }`}
       >
@@ -144,7 +144,7 @@ export function SeatMapModal({ isOpen, onClose, flight, tier, currency, onConfir
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-b border-[var(--border-hairline)] bg-[var(--bg-subtle)] px-5 py-2.5 text-xs text-[var(--text-secondary)]">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-b border-[var(--border-hairline)] bg-white/50 px-5 py-2.5 text-xs text-[var(--text-secondary)]">
           <span className="flex items-center gap-1.5">
             <span className="h-3.5 w-3.5 rounded-[4px] border border-[var(--border-strong)] bg-[var(--bg-surface)]" /> Available
           </span>
@@ -193,7 +193,7 @@ export function SeatMapModal({ isOpen, onClose, flight, tier, currency, onConfir
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-4 border-t border-[var(--border-hairline)] bg-[var(--bg-surface)] px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
+        <div className="flex items-center justify-between gap-4 border-t border-[var(--border-hairline)] px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
           <div aria-live="polite">
             <div className="text-xs text-[var(--text-muted)]">
               Seat <span className="font-semibold text-[var(--text-primary)]">{selectedSeatId}</span>

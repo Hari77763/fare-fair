@@ -28,7 +28,7 @@ export function PriceBreakdownModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="w-full max-w-lg glass rounded-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
           <div>
@@ -86,7 +86,7 @@ export function PriceBreakdownModal({
             <div className="flex justify-between items-center text-sm py-1 border-b border-slate-100 text-teal-700">
               <div className="font-medium flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-teal-600" />
-                FareFair Platform Fee
+                FairFare Platform Fee
               </div>
               <div className="font-bold">₹0 (Free Metasearch)</div>
             </div>

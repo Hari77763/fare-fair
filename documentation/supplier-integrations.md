@@ -1,6 +1,6 @@
 # Supplier Integration Guide
 
-This document describes how to integrate a new flight inventory supplier (GDS, NDC aggregator, or OTA) into FareFair.
+This document describes how to integrate a new flight inventory supplier (GDS, NDC aggregator, or OTA) into FairFare.
 
 ---
 
@@ -22,7 +22,7 @@ class FlightSupplier(ABC):
 
     @abstractmethod
     def normalize(self, raw_data: dict) -> FlightResult:
-        """Map raw supplier response into FareFair canonical data model."""
+        """Map raw supplier response into FairFare canonical data model."""
         pass
 
     @abstractmethod

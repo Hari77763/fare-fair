@@ -36,7 +36,7 @@ export function BrandMark({ className = "" }: { className?: string }) {
         </svg>
       </span>
       <span className="text-[17px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
-        Fare<span className="text-[var(--accent-primary)]">Fair</span>
+        Fair<span className="text-[var(--accent-primary)]">Fare</span>
       </span>
     </span>
   );
@@ -70,15 +70,16 @@ export function Navbar({
 
   return (
     <header
-      className={`sticky top-0 w-full border-b backdrop-blur-xl backdrop-saturate-150 transition-[background-color,border-color,box-shadow] duration-300 ${
-        scrolled
-          ? "border-[var(--border-hairline)] bg-[var(--bg-elevated)] shadow-[var(--shadow-sticky)]"
-          : "border-transparent bg-[rgba(247,248,250,0.72)]"
-      }`}
+      className="sticky top-0 w-full px-3 pt-2.5 sm:px-4"
       style={{ zIndex: "var(--z-sticky-header)", height: "var(--header-h)" }}
     >
-      <div className="mx-auto flex h-full max-w-[1200px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <Link href="/" aria-label="FareFair home" className="shrink-0 rounded-lg">
+      {/* Floating glass capsule; tightens and deepens once the page scrolls */}
+      <div
+        className={`glass mx-auto flex h-[50px] max-w-[1180px] items-center justify-between gap-4 rounded-full pl-2.5 pr-2 transition-[box-shadow,transform,max-width] duration-500 ease-out-expo ${
+          scrolled ? "max-w-[1120px] shadow-[0_18px_40px_-18px_rgba(30,58,138,0.4)]" : ""
+        }`}
+      >
+        <Link href="/" aria-label="FairFare home" className="shrink-0 rounded-lg">
           <BrandMark />
         </Link>
 
@@ -90,19 +91,13 @@ export function Navbar({
                 key={link.href}
                 href={link.href}
                 aria-current={active ? "page" : undefined}
-                className={`relative rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors duration-200 ${
+                className={`relative rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-[background-color,color,box-shadow] duration-300 ${
                   active
-                    ? "text-[var(--text-primary)]"
-                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    ? "bg-white/85 text-[var(--text-primary)] shadow-[inset_0_1px_0_#fff,0_1px_2px_rgba(11,18,32,0.08),0_4px_12px_-6px_rgba(30,58,138,0.3)]"
+                    : "text-[var(--text-muted)] hover:bg-white/50 hover:text-[var(--text-primary)]"
                 }`}
               >
                 {link.label}
-                <span
-                  aria-hidden="true"
-                  className={`absolute inset-x-3.5 -bottom-px h-px origin-center bg-[var(--text-primary)] transition-transform duration-300 ease-out-expo ${
-                    active ? "scale-x-100" : "scale-x-0"
-                  }`}
-                />
               </Link>
             );
           })}
@@ -168,7 +163,8 @@ export function Navbar({
         <div
           ref={menuRef}
           id="mobile-menu"
-          className="absolute inset-x-3 top-[calc(var(--header-h)-4px)] origin-top animate-pop-in rounded-[var(--radius-card)] border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2 shadow-[var(--shadow-float)] lg:hidden"
+          className="glass glass-strong absolute inset-x-3 top-[calc(var(--header-h)+2px)] origin-top animate-pop-in rounded-[22px] p-2 lg:hidden"
+          style={{ position: "absolute" }}
         >
           <nav aria-label="Mobile" className="flex flex-col">
             {[...NAV_LINKS, { href: "/dashboard", label: "Dashboard" }].map((link) => {

@@ -1,8 +1,8 @@
-# FareFair (India-First Flight Metasearch Engine)
+# FairFare (India-First Flight Metasearch Engine)
 
-FareFair is an independent, multi-supplier flight metasearch platform covering Indian domestic flights and international flights departing from India.
+FairFare is an independent, multi-supplier flight metasearch platform covering Indian domestic flights and international flights departing from India.
 
-Inspired by clean, minimalist travel design, FareFair provides complete fare transparency, zero platform fees, and two independent price rankings: **Absolute Cheapest** and **Cheapest Trusted**.
+Inspired by clean, minimalist travel design, FairFare provides complete fare transparency, zero platform fees, and two independent price rankings: **Absolute Cheapest** and **Cheapest Trusted**.
 
 ---
 
@@ -16,7 +16,7 @@ Inspired by clean, minimalist travel design, FareFair provides complete fare tra
    - **Cheapest Trusted**: Lowest offer from providers scoring $\ge 85\%$ on our independent trust model.
 3. **Transparent Price Breakdown**:
    - Every fare itemizes: Base Fare + Mandatory Airport Taxes (UDF/PSF) + Supplier Convenience Fees.
-   - **0% FareFair markup** guaranteed.
+   - **0% FairFare markup** guaranteed.
 4. **Multi-Supplier Architecture**:
    - Concurrent asynchronous fan-out across GDS (Amadeus/Travelport) and Indian OTAs (MakeMyTrip, Cleartrip, EaseMyTrip, ixigo).
 5. **DGCA 2026 Compliance**:
@@ -29,7 +29,7 @@ Inspired by clean, minimalist travel design, FareFair provides complete fare tra
 ## Project Structure
 
 ```
-farefair/
+fairfare/
 ├── frontend/               # Next.js 14 App Router, Tailwind CSS, Lucide icons
 │   └── src/
 │       ├── app/            # Pages: Home, Search, Flights, Price Alerts, Dashboard, About, How It Works
@@ -94,6 +94,15 @@ The deployable web app is the Next.js project in `frontend/`.
 - **Environment variables:** none required (no secrets are used by the frontend)
 
 The FastAPI backend is not deployed to Vercel; it needs PostgreSQL and Redis and is intended for container hosting (see `infrastructure/docker`).
+
+---
+
+## Credits
+
+FairFare is a collaboration:
+
+- **Hari** ([@Hari77763](https://github.com/Hari77763)) — original idea, product concept and first build
+- **Sofiyan** ([@sofiyandev56-spec](https://github.com/sofiyandev56-spec)) — UI/UX redesign, liquid-glass interface, bug fixes, security hardening, tests and deployment
 
 ---
 

@@ -39,7 +39,7 @@ function prefersReducedMotion() {
 
 function ResultSkeleton() {
   return (
-    <div className="rounded-[var(--radius-card)] border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5 sm:p-6" aria-hidden="true">
+    <div className="glass-card rounded-[var(--radius-card)] p-5 sm:p-6" aria-hidden="true">
       <div className="grid grid-cols-1 items-center gap-5 md:grid-cols-12">
         <div className="flex items-center gap-3 md:col-span-3">
           <div className="skeleton h-11 w-11 rounded-[12px]" />
@@ -250,7 +250,7 @@ export default function FlightBookingApp() {
   const compareHref = `/search?origin=${origin.code}&destination=${destination.code}&departure_date=${departureDate}&adults=${passengers.adults}`;
 
   return (
-    <div className="relative min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)]">
+    <div className="relative min-h-screen text-[var(--text-primary)]">
       <ScrollProgress />
 
       <Navbar
@@ -370,7 +370,7 @@ export default function FlightBookingApp() {
             {!isSampleRoute && !isSearching && !showSavedOnly && (
               <div
                 role="note"
-                className="mb-4 flex animate-fade-up items-start gap-3 rounded-[var(--radius-control)] border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-secondary)]"
+                className="mb-4 flex animate-fade-up items-start gap-3 glass-card rounded-[var(--radius-control)] px-4 py-3 text-sm text-[var(--text-secondary)]"
               >
                 <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
                 <p>
@@ -388,7 +388,7 @@ export default function FlightBookingApp() {
                   <ResultSkeleton />
                 </>
               ) : filteredFlights.length === 0 ? (
-                <div className="animate-fade-up rounded-[var(--radius-card)] border border-dashed border-[var(--border-strong)] bg-[var(--bg-surface)] px-6 py-14 text-center">
+                <div className="animate-fade-up glass-card rounded-[var(--radius-card)] border-dashed px-6 py-14 text-center">
                   <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-[var(--bg-subtle)] text-[var(--text-muted)]">
                     {showSavedOnly ? <Bookmark className="h-5 w-5" /> : <SlidersHorizontal className="h-5 w-5" />}
                   </div>

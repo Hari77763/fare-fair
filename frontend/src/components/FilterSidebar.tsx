@@ -237,7 +237,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
     <>
       <aside
         aria-label="Filters"
-        className="sticky hidden w-72 shrink-0 self-start rounded-[var(--radius-card)] border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5 shadow-[var(--shadow-card)] lg:block"
+        className="sticky hidden w-72 shrink-0 self-start glass rounded-[var(--radius-card)] p-5 lg:block"
         style={{ top: 'calc(var(--header-h) + 72px)' }}
       >
         <div className="mb-5 flex items-center justify-between border-b border-[var(--border-hairline)] pb-4">
@@ -282,7 +282,7 @@ export function FilterSidebar(props: FilterSidebarProps) {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-4">{content}</div>
-            <div className="border-t border-[var(--border-hairline)] bg-[var(--bg-surface)] px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="border-t border-[var(--border-hairline)] px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <button type="button" onClick={requestClose} className="btn btn-primary h-12 w-full text-sm">
                 Show {resultCount} flight{resultCount === 1 ? '' : 's'}
               </button>
@@ -358,7 +358,7 @@ function MobileSheet({
         aria-modal="true"
         aria-label="Filters"
         tabIndex={-1}
-        className={`absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-[24px] bg-[var(--bg-surface)] shadow-[var(--shadow-sheet)] outline-none ${
+        className={`absolute inset-x-0 bottom-0 glass glass-strong flex max-h-[88vh] flex-col rounded-t-[28px] shadow-[var(--shadow-sheet)] outline-none ${
           closing ? '' : 'animate-sheet-up'
         }`}
         style={{

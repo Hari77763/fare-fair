@@ -5,7 +5,7 @@ import { ShieldCheck, Scale, Cpu, Search, CheckCircle2, AlertTriangle, FileText 
 
 export default function HowItWorksPage() {
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
 
       <main id="main" className="max-w-5xl mx-auto px-4 sm:px-8 py-16 flex-1 w-full">
@@ -15,10 +15,10 @@ export default function HowItWorksPage() {
             Platform Architecture & Methodology
           </span>
           <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-navy tracking-tight mt-4">
-            How FareFair Works
+            How FairFare Works
           </h1>
           <p className="text-sm sm:text-base text-slate-600 mt-4 leading-relaxed">
-            FareFair is an independent, multi-supplier flight metasearch platform. We do not sell tickets or hold inventory — we query hundreds of authorised airlines and ticketing providers concurrently to reveal the true total price.
+            FairFare is an independent, multi-supplier flight metasearch platform. We do not sell tickets or hold inventory — we query hundreds of authorised airlines and ticketing providers concurrently to reveal the true total price.
           </p>
         </div>
 
@@ -27,17 +27,17 @@ export default function HowItWorksPage() {
           <h2 className="text-xl font-bold text-navy mb-6">The 4-Step Metasearch Workflow</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-7 rounded-2xl border border-slate-200/80 shadow-sm">
+            <div className="glass-card p-7 rounded-2xl">
               <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 font-semibold tracking-tight flex items-center justify-center text-sm mb-4">
                 1
               </div>
               <h3 className="text-base font-bold text-navy mb-2">Concurrent Supplier Fan-Out</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                When you initiate a flight search, FareFair’s asynchronous orchestrator fans out concurrent API queries across Amadeus, Travelport, Wego, and top Indian OTAs (Cleartrip, MakeMyTrip, EaseMyTrip, ixigo) with individual timeouts.
+                When you initiate a flight search, FairFare’s asynchronous orchestrator fans out concurrent API queries across Amadeus, Travelport, Wego, and top Indian OTAs (Cleartrip, MakeMyTrip, EaseMyTrip, ixigo) with individual timeouts.
               </p>
             </div>
 
-            <div className="bg-white p-7 rounded-2xl border border-slate-200/80 shadow-sm">
+            <div className="glass-card p-7 rounded-2xl">
               <div className="w-10 h-10 rounded-2xl bg-teal-100 text-teal-900 font-semibold tracking-tight flex items-center justify-center text-sm mb-4">
                 2
               </div>
@@ -47,7 +47,7 @@ export default function HowItWorksPage() {
               </p>
             </div>
 
-            <div className="bg-white p-7 rounded-2xl border border-slate-200/80 shadow-sm">
+            <div className="glass-card p-7 rounded-2xl">
               <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 font-semibold tracking-tight flex items-center justify-center text-sm mb-4">
                 3
               </div>
@@ -57,27 +57,27 @@ export default function HowItWorksPage() {
               </p>
             </div>
 
-            <div className="bg-white p-7 rounded-2xl border border-slate-200/80 shadow-sm">
+            <div className="glass-card p-7 rounded-2xl">
               <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-900 font-semibold tracking-tight flex items-center justify-center text-sm mb-4">
                 4
               </div>
               <h3 className="text-base font-bold text-navy mb-2">Direct Seller Redirect</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                FareFair performs an instantaneous pre-booking price revalidation check, then transfers you directly to the airline or authorized OTA checkout page. We never store passenger payment credentials.
+                FairFare performs an instantaneous pre-booking price revalidation check, then transfers you directly to the airline or authorized OTA checkout page. We never store passenger payment credentials.
               </p>
             </div>
           </div>
         </div>
 
         {/* Two Ranking Algorithms Explained */}
-        <div id="trust-ranking" className="bg-white rounded-2xl border border-slate-200/80 p-8 sm:p-12 shadow-sm mb-20 space-y-6">
+        <div id="trust-ranking" className="glass-card rounded-2xl p-8 sm:p-12 shadow-sm mb-20 space-y-6">
           <div className="flex items-center gap-3">
             <Scale className="w-6 h-6 text-teal-600" />
             <h2 className="text-xl font-bold text-navy">Two Distinct Price Rankings</h2>
           </div>
 
           <p className="text-xs text-slate-600 leading-relaxed">
-            Unlike traditional flight engines where sellers can pay for sponsored top placement, FareFair separates offers into two strictly transparent rankings:
+            Unlike traditional flight engines where sellers can pay for sponsored top placement, FairFare separates offers into two strictly transparent rankings:
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">

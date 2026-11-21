@@ -1,4 +1,4 @@
-# FareFair API Documentation (v1)
+# FairFare API Documentation (v1)
 
 Base URL: `http://localhost:8000/api/v1`
 

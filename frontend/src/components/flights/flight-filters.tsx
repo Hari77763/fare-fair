@@ -47,7 +47,7 @@ export function FlightFilters({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm space-y-6">
+    <div className="glass-card rounded-2xl p-6 shadow-sm space-y-6">
       <div className="flex items-center justify-between pb-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-slate-500" />
@@ -136,7 +136,7 @@ export function FlightFilters({
           Independent Rankings
         </span>
         <p className="text-[10px] text-teal-700 leading-relaxed">
-          FareFair does not prioritize airlines or OTAs for payment. Toggle between Absolute Cheapest and Cheapest Trusted at any time.
+          FairFare does not prioritize airlines or OTAs for payment. Toggle between Absolute Cheapest and Cheapest Trusted at any time.
         </p>
       </div>
     </div>

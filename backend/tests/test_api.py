@@ -1,4 +1,4 @@
-"""API tests for the FareFair backend.
+"""API tests for the FairFare backend.
 
 Run from the backend directory:  python -m pytest -q
 """

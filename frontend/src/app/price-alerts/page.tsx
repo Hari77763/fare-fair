@@ -59,7 +59,7 @@ export default function PriceAlertsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
 
       <main id="main" className="max-w-6xl mx-auto px-4 sm:px-8 py-12 flex-1 w-full">
@@ -91,7 +91,7 @@ export default function PriceAlertsPage() {
 
         {/* Add Alert Form Modal/Panel */}
         {showAddForm && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-md mb-8 animate-in fade-in duration-200">
+          <div className="glass-card rounded-2xl p-6 shadow-md mb-8 animate-in fade-in duration-200">
             <h3 className="text-sm font-bold text-navy mb-4">Set Up New Fare Alert</h3>
             <form onSubmit={handleCreateAlert} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
               <div>
@@ -154,7 +154,7 @@ export default function PriceAlertsPage() {
         {/* Alerts List */}
         <div className="space-y-4">
           {alerts.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+            <div className="glass-card rounded-2xl border-dashed px-6 py-14 text-center">
               <Bell className="mx-auto h-6 w-6 text-slate-400" />
               <h2 className="mt-3 text-base font-semibold text-navy">No routes tracked</h2>
               <p className="mx-auto mt-1 max-w-xs text-sm text-slate-500">
@@ -170,7 +170,7 @@ export default function PriceAlertsPage() {
             return (
               <div
                 key={alert.id}
-                className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-6"
+                className="glass-card rounded-2xl p-6 shadow-sm lift-on-hover flex flex-col sm:flex-row sm:items-center justify-between gap-6"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center font-bold text-navy shrink-0">

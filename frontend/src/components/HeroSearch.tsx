@@ -152,15 +152,15 @@ export function HeroSearch({
     <div className="relative mx-auto w-full max-w-[1200px] px-4 pb-6 pt-10 sm:px-6 sm:pt-16 lg:px-8">
       {/* Editorial headline */}
       <div className="mx-auto mb-9 max-w-2xl text-center sm:mb-11">
-        <p className="mb-4 inline-flex animate-fade-up items-center gap-2 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-3 py-1 text-xs font-medium text-[var(--text-secondary)] shadow-[var(--shadow-card)]">
+        <p className="mb-4 inline-flex animate-fade-up items-center gap-2 glass-card rounded-full px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
           <span className="h-1.5 w-1.5 rounded-full bg-[var(--semantic-success)]" />
-          Independent · Zero FareFair markup
+          Independent · Zero FairFare markup
         </p>
         <h1
           className="animate-fade-up text-[34px] font-semibold leading-[1.05] tracking-[-0.035em] text-[var(--text-primary)] sm:text-[56px]"
           style={{ animationDelay: '60ms' }}
         >
-          Pure aviation metasearch.
+          Pure aviation <span className="text-liquid">metasearch.</span>
         </h1>
         <p
           className="mx-auto mt-4 max-w-lg animate-fade-up text-[15px] leading-relaxed text-[var(--text-secondary)] sm:text-[17px]"
@@ -174,7 +174,7 @@ export function HeroSearch({
       <form
         onSubmit={submit}
         aria-label="Flight search"
-        className="relative animate-fade-up rounded-[20px] border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-3 shadow-[var(--shadow-float)] sm:p-5"
+        className="glass animate-fade-up rounded-[26px] p-3 sm:p-5"
         style={{ animationDelay: '180ms', zIndex: 'var(--z-base)' }}
       >
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-1">
@@ -288,7 +288,7 @@ export function HeroSearch({
               <div
                 role="dialog"
                 aria-label="Travellers and cabin"
-                className="absolute right-0 top-[calc(100%+8px)] w-[min(20rem,calc(100vw-2rem))] origin-top-right animate-pop-in rounded-[var(--radius-card)] border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-4 shadow-[var(--shadow-float)]"
+                className="absolute right-0 top-[calc(100%+8px)] w-[min(20rem,calc(100vw-2rem))] origin-top-right animate-pop-in glass glass-strong rounded-[var(--radius-card)] p-4"
                 style={{ zIndex: 'var(--z-popover)' }}
               >
                 <div className="divide-y divide-[var(--border-hairline)]">
@@ -370,7 +370,7 @@ export function HeroSearch({
             {returnInvalid ? (
               <span className="text-[var(--semantic-danger)]">Return date must be on or after departure.</span>
             ) : (
-              <>Prices include mandatory taxes. Seller fees shown before you leave FareFair.</>
+              <>Prices include mandatory taxes. Seller fees shown before you leave FairFare.</>
             )}
           </p>
           <button

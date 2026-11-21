@@ -37,12 +37,12 @@ export function StickyHeader({
   return (
     <div
       aria-hidden={!isVisible}
-      className={`fixed inset-x-0 border-b border-[var(--border-hairline)] bg-[var(--bg-elevated)] backdrop-blur-xl backdrop-saturate-150 transition-[transform,opacity] duration-300 ease-out-expo ${
-        isVisible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
+      className={`fixed inset-x-0 px-3 transition-[transform,opacity] duration-500 ease-out-expo sm:px-4 ${
+        isVisible ? 'translate-y-0 scale-100 opacity-100' : 'pointer-events-none -translate-y-3 scale-[0.98] opacity-0'
       }`}
-      style={{ top: 'var(--header-h)', zIndex: 'calc(var(--z-sticky-header) - 1)' }}
+      style={{ top: 'calc(var(--header-h) + 6px)', zIndex: 'calc(var(--z-sticky-header) - 1)' }}
     >
-      <div className="mx-auto flex h-12 max-w-[1200px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="glass mx-auto flex h-11 max-w-[760px] items-center justify-between gap-3 rounded-full pl-4 pr-1.5">
         <div className="flex min-w-0 items-center gap-2 text-sm">
           <span className="font-mono font-semibold text-[var(--text-primary)]">{origin.code}</span>
           <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />

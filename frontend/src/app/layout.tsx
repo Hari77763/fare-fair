@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { LiquidGlass } from "@/components/LiquidGlass";
 
 const sans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -17,11 +18,11 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "FareFair — Transparent flight metasearch for India",
-    template: "%s · FareFair",
+    default: "FairFare — Transparent flight metasearch for India",
+    template: "%s · FairFare",
   },
   description:
-    "Compare flight prices across airlines and authorised booking sites. Two independent rankings, itemised fees and zero FareFair markup.",
+    "Compare flight prices across airlines and authorised booking sites. Two independent rankings, itemised fees and zero FairFare markup.",
 };
 
 export const viewport: Viewport = {
@@ -45,6 +46,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: revealBootstrap }} />
       </head>
       <body className="font-sans">
+        <LiquidGlass />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-[var(--text-primary)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"

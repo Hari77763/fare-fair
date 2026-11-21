@@ -49,8 +49,8 @@ export function FlexibleFareStrip({
               onClick={() => onSelectDate(fare.dateISO)}
               className={`relative min-w-[96px] flex-1 rounded-[var(--radius-control)] border px-3 py-3 text-center transition-[border-color,background-color,box-shadow,transform] duration-200 active:scale-[0.98] ${
                 selected
-                  ? 'border-[var(--text-primary)] bg-[var(--bg-surface)] shadow-[0_0_0_1px_var(--text-primary)]'
-                  : 'border-[var(--border-hairline)] bg-[var(--bg-surface)] hover:border-[var(--border-strong)]'
+                  ? 'glass-card border-[var(--text-primary)] shadow-[0_0_0_1px_var(--text-primary),0_10px_24px_-14px_rgba(30,58,138,0.45)]'
+                  : 'glass-card hover:-translate-y-0.5'
               }`}
             >
               <span className="block text-[11px] font-medium text-[var(--text-muted)]">

@@ -66,7 +66,7 @@ export function SupplierTrustBadge({ supplierName, trustScore }: SupplierTrustBa
             </div>
           </div>
           <p className="mt-2 pt-1.5 border-t border-slate-800 text-[10px] text-slate-400 leading-tight">
-            Independent FareFair trust rating. Sellers cannot pay to alter their score.
+            Independent FairFare trust rating. Sellers cannot pay to alter their score.
           </p>
         </div>
       )}

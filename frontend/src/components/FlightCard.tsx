@@ -65,7 +65,7 @@ export function FlightCard({ flight, currency, onSelectFare, index, isSaved, onT
         selectedTier.priceInr + selectedTier.taxesInr,
         currency
       )}`}
-      className="spotlight-card rounded-[var(--radius-card)] border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-[var(--shadow-card)]"
+      className="spotlight-card glass-card rounded-[var(--radius-card)]"
     >
       <div className="p-4 sm:p-6">
         {/* Tag row */}
@@ -251,7 +251,7 @@ export function FlightCard({ flight, currency, onSelectFare, index, isSaved, onT
                     className={`group relative rounded-[var(--radius-control)] border p-4 text-left transition-[border-color,background-color,box-shadow] duration-200 ${
                       selected
                         ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)] shadow-[0_0_0_3px_var(--accent-soft)]'
-                        : 'border-[var(--border-hairline)] bg-[var(--bg-surface)] hover:border-[var(--border-strong)]'
+                        : 'border-white/70 bg-white/60 hover:bg-white/85'
                     }`}
                   >
                     <span className="flex items-start justify-between">

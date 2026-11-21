@@ -73,11 +73,11 @@ function SearchResultsContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
 
       {/* Top Route Summary Bar */}
-      <section className="bg-white border-b border-slate-200/80 py-6 px-4 sm:px-8">
+      <section className="glass-bar py-6 px-4 sm:px-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex items-baseline gap-2">
@@ -113,7 +113,7 @@ function SearchResultsContent() {
             </span>
           </div>
           <span className="font-semibold text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-full text-[11px]">
-            Zero FareFair Platform Fees
+            Zero FairFare Platform Fees
           </span>
         </div>
       </div>
@@ -137,7 +137,7 @@ function SearchResultsContent() {
           {/* Results Area (9 cols) */}
           <section className="lg:col-span-9 space-y-5">
             {/* Two Signature Ranking Tabs */}
-            <div className="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3">
+            <div className="glass-card p-2 rounded-2xl flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
@@ -178,7 +178,7 @@ function SearchResultsContent() {
 
             {/* Mobile Filter Drawer */}
             {mobileFiltersOpen && (
-              <div className="lg:hidden p-4 bg-white rounded-2xl border border-slate-200 shadow-xl mb-4">
+              <div className="lg:hidden p-4 glass-card rounded-2xl mb-4">
                 <FlightFilters
                   maxPrice={maxPrice}
                   onPriceChange={setMaxPrice}
@@ -199,7 +199,7 @@ function SearchResultsContent() {
 
             {/* Flights List */}
             {filteredFlights.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4">
+              <div className="glass-card rounded-2xl p-12 text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400 text-2xl">
                   ✈
                 </div>

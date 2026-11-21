@@ -116,7 +116,7 @@ export function AirportPicker({ label, value, onChange, airports, excludeCode, t
 
       {open && (
         <div
-          className="absolute left-0 top-[calc(100%+8px)] w-[min(22rem,calc(100vw-2rem))] origin-top-left animate-pop-in rounded-[var(--radius-card)] border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-2 shadow-[var(--shadow-float)]"
+          className="absolute left-0 top-[calc(100%+8px)] w-[min(22rem,calc(100vw-2rem))] origin-top-left animate-pop-in glass glass-strong rounded-[var(--radius-card)] p-2"
           style={{ zIndex: 'var(--z-popover)' }}
         >
           <label className="relative block">

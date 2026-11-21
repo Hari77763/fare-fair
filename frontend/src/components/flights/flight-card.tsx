@@ -53,7 +53,7 @@ export function FlightCard({ flight, rankingMode }: FlightCardProps) {
 
   return (
     <>
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all p-5 sm:p-6 mb-4 relative overflow-hidden">
+      <div className="glass-card rounded-2xl lift-on-hover p-5 sm:p-6 mb-4 relative overflow-hidden">
         {/* Top Badges Strip */}
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100 text-xs">
           <div className="flex items-center gap-2">

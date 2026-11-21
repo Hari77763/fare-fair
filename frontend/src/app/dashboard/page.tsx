@@ -10,7 +10,7 @@ import Link from "next/link";
 
 export default function DashboardPage() {
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
 
       <main id="main" className="max-w-6xl mx-auto px-4 sm:px-8 py-12 flex-1 w-full">
@@ -25,7 +25,7 @@ export default function DashboardPage() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div className="glass-card p-6 rounded-2xl">
             <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mb-4">
               <Search className="w-5 h-5" />
             </div>
@@ -33,7 +33,7 @@ export default function DashboardPage() {
             <div className="text-xs text-slate-500 font-medium mt-0.5">Recent Route Searches</div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div className="glass-card p-6 rounded-2xl">
             <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 mb-4">
               <Bell className="w-5 h-5" />
             </div>
@@ -41,7 +41,7 @@ export default function DashboardPage() {
             <div className="text-xs text-slate-500 font-medium mt-0.5">Active Price Trackers</div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div className="glass-card p-6 rounded-2xl">
             <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mb-4">
               <Award className="w-5 h-5" />
             </div>
@@ -51,7 +51,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Searches Table */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-sm">
+        <div className="glass-card rounded-2xl p-6 sm:p-8 shadow-sm">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <History className="w-4 h-4 text-slate-500" />

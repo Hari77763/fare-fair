@@ -1,5 +1,5 @@
 /**
- * FareFair Mock Data
+ * FairFare Mock Data
  * ===================
  * All data in this file is SIMULATED for demonstration purposes.
  * Prices are stored as integer paise (1 INR = 100 paise).

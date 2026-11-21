@@ -68,7 +68,7 @@ export function BookingToast({
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
-      className={`fixed inset-x-3 bottom-3 overflow-hidden rounded-[var(--radius-card)] bg-[var(--bg-inverse)] text-white shadow-[var(--shadow-float)] transition-[opacity,transform] duration-200 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[22rem] ${
+      className={`fixed inset-x-3 bottom-3 glass-dark overflow-hidden rounded-[20px] text-white transition-[opacity,transform] duration-200 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[22rem] ${
         closing ? 'translate-y-2 opacity-0' : 'animate-in fade-in slide-in-from-bottom-4 duration-300'
       }`}
       style={{ zIndex: 'var(--z-toast)' }}
@@ -105,7 +105,7 @@ export function BookingToast({
         </dl>
 
         <p className="mt-3 text-[11px] leading-snug text-slate-400">
-          Demo flow — in production you’d complete payment on the airline or authorised seller’s site. Zero FareFair markup.
+          Demo flow — in production you’d complete payment on the airline or authorised seller’s site. Zero FairFare markup.
         </p>
       </div>
       <div
