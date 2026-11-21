@@ -5,16 +5,16 @@ import { ShieldCheck, Scale, Cpu, Search, CheckCircle2, AlertTriangle, FileText 
 
 export default function HowItWorksPage() {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-[var(--bg-canvas)] flex flex-col">
       <Navbar />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-8 py-16 flex-1 w-full">
+      <main id="main" className="max-w-5xl mx-auto px-4 sm:px-8 py-16 flex-1 w-full">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-600 px-3 py-1 bg-amber-50 rounded-full border border-amber-200">
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-600 px-3 py-1 bg-blue-50 rounded-full border border-blue-200">
             Platform Architecture & Methodology
           </span>
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-navy tracking-tight mt-4">
+          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-navy tracking-tight mt-4">
             How FareFair Works
           </h1>
           <p className="text-sm sm:text-base text-slate-600 mt-4 leading-relaxed">
@@ -27,8 +27,8 @@ export default function HowItWorksPage() {
           <h2 className="text-xl font-bold text-navy mb-6">The 4-Step Metasearch Workflow</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm">
-              <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 font-extrabold flex items-center justify-center text-sm mb-4">
+            <div className="bg-white p-7 rounded-2xl border border-slate-200/80 shadow-sm">
+              <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 font-semibold tracking-tight flex items-center justify-center text-sm mb-4">
                 1
               </div>
               <h3 className="text-base font-bold text-navy mb-2">Concurrent Supplier Fan-Out</h3>
@@ -37,8 +37,8 @@ export default function HowItWorksPage() {
               </p>
             </div>
 
-            <div className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm">
-              <div className="w-10 h-10 rounded-2xl bg-teal-100 text-teal-900 font-extrabold flex items-center justify-center text-sm mb-4">
+            <div className="bg-white p-7 rounded-2xl border border-slate-200/80 shadow-sm">
+              <div className="w-10 h-10 rounded-2xl bg-teal-100 text-teal-900 font-semibold tracking-tight flex items-center justify-center text-sm mb-4">
                 2
               </div>
               <h3 className="text-base font-bold text-navy mb-2">Canonical Deduplication</h3>
@@ -47,8 +47,8 @@ export default function HowItWorksPage() {
               </p>
             </div>
 
-            <div className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm">
-              <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 font-extrabold flex items-center justify-center text-sm mb-4">
+            <div className="bg-white p-7 rounded-2xl border border-slate-200/80 shadow-sm">
+              <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 font-semibold tracking-tight flex items-center justify-center text-sm mb-4">
                 3
               </div>
               <h3 className="text-base font-bold text-navy mb-2">Transparent Total Price Calculation</h3>
@@ -57,8 +57,8 @@ export default function HowItWorksPage() {
               </p>
             </div>
 
-            <div className="bg-white p-7 rounded-3xl border border-slate-200/80 shadow-sm">
-              <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-900 font-extrabold flex items-center justify-center text-sm mb-4">
+            <div className="bg-white p-7 rounded-2xl border border-slate-200/80 shadow-sm">
+              <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-900 font-semibold tracking-tight flex items-center justify-center text-sm mb-4">
                 4
               </div>
               <h3 className="text-base font-bold text-navy mb-2">Direct Seller Redirect</h3>
@@ -70,7 +70,7 @@ export default function HowItWorksPage() {
         </div>
 
         {/* Two Ranking Algorithms Explained */}
-        <div id="trust-ranking" className="bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 shadow-sm mb-20 space-y-6">
+        <div id="trust-ranking" className="bg-white rounded-2xl border border-slate-200/80 p-8 sm:p-12 shadow-sm mb-20 space-y-6">
           <div className="flex items-center gap-3">
             <Scale className="w-6 h-6 text-teal-600" />
             <h2 className="text-xl font-bold text-navy">Two Distinct Price Rankings</h2>
@@ -81,9 +81,9 @@ export default function HowItWorksPage() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            <div className="p-6 rounded-2xl bg-amber-50/60 border border-amber-200">
-              <h3 className="text-sm font-bold text-amber-950 mb-2">1. Absolute Cheapest</h3>
-              <p className="text-xs text-amber-900 leading-relaxed">
+            <div className="p-6 rounded-2xl bg-blue-50/60 border border-blue-200">
+              <h3 className="text-sm font-bold text-blue-950 mb-2">1. Absolute Cheapest</h3>
+              <p className="text-xs text-blue-900 leading-relaxed">
                 Strict price-first ranking. Displays the lowest payable price across all connected suppliers regardless of seller tier or commercial relationship.
               </p>
             </div>
@@ -98,9 +98,9 @@ export default function HowItWorksPage() {
         </div>
 
         {/* Indian Civil Aviation & DGCA 2026 Compliance */}
-        <div id="dgca-compliance" className="bg-navy rounded-3xl text-white p-8 sm:p-12 shadow-xl space-y-6">
+        <div id="dgca-compliance" className="bg-navy rounded-2xl text-white p-8 sm:p-12 shadow-xl space-y-6">
           <div className="flex items-center gap-3">
-            <FileText className="w-6 h-6 text-amber-400" />
+            <FileText className="w-6 h-6 text-blue-400" />
             <h2 className="text-xl font-bold">Indian Aviation & DGCA 2026 Compliance</h2>
           </div>
 

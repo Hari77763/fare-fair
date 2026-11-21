@@ -44,3 +44,7 @@ Desktop.ini
 .idea/
 *.swp
 *.swo
+
+# Build & test caches
+*.tsbuildinfo
+.pytest_cache/

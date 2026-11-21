@@ -1,248 +1,310 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { FlightItinerary, FareTier, CurrencyCode } from '../types/flight';
+import React, { useId, useRef, useState } from 'react';
+import { Bookmark, Check, ChevronDown, Luggage, Utensils, RotateCcw, Users } from 'lucide-react';
+import type { FlightItinerary, FareTier, CurrencyCode } from '../types/flight';
 import { convertPrice } from '../data/mockFlights';
-import { Clock, ShieldCheck, ChevronDown, ChevronUp, Check, Luggage, Plane } from 'lucide-react';
 
 interface FlightCardProps {
   flight: FlightItinerary;
   currency: CurrencyCode;
   onSelectFare: (flight: FlightItinerary, tier: FareTier) => void;
   index: number;
+  isSaved: boolean;
+  onToggleSave: (id: string) => void;
+  highlights: ('cheapest' | 'fastest')[];
 }
 
-export function FlightCard({ flight, currency, onSelectFare, index }: FlightCardProps) {
+/** Itinerary times are stored as airport-local wall clock in the ISO string. */
+export function wallClock(iso: string) {
+  return new Date(iso).toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'UTC',
+  });
+}
+
+function formatDuration(mins: number) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+export function FlightCard({ flight, currency, onSelectFare, index, isSaved, onToggleSave, highlights }: FlightCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [selectedTier, setSelectedTier] = useState<FareTier>(flight.fareTiers[0]);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
+  const detailsId = useId();
 
   const segment = flight.segments[0];
   const lastSegment = flight.segments[flight.segments.length - 1];
+  const depTime = wallClock(segment.departureISO);
+  const arrTime = wallClock(lastSegment.arrivalISO);
+  const arrivesNextDay = lastSegment.arrivalISO.slice(0, 10) !== segment.departureISO.slice(0, 10);
+  const lowSeats = flight.seatsRemaining <= 4;
 
-  const depTime = new Date(segment.departureISO).toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-
-  const arrTime = new Date(lastSegment.arrivalISO).toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-
-  const hours = Math.floor(flight.totalDurationMinutes / 60);
-  const minutes = flight.totalDurationMinutes % 60;
-  const durationStr = `${hours}h ${minutes}m`;
-
-  // Zero-re-render mouse spotlight calculation
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+  // Spotlight border follows the pointer without re-rendering
+  const onPointerMove = (e: React.PointerEvent<HTMLElement>) => {
     if (e.pointerType !== 'mouse' || !cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    cardRef.current.style.setProperty('--mouse-x', `${x}px`);
-    cardRef.current.style.setProperty('--mouse-y', `${y}px`);
+    cardRef.current.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+    cardRef.current.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
   };
 
+  // Highlights are computed from live fares by the page, never trusted from static tags
+  const tags = highlights;
+
   return (
-    <div
+    <article
       ref={cardRef}
       onPointerMove={onPointerMove}
-      className="spotlight-card bg-white rounded-[var(--radius-card)] p-5 sm:p-6 mb-4 shadow-[var(--shadow-card)] transition-all overflow-hidden"
+      data-reveal
+      style={{ ['--reveal-delay' as string]: `${Math.min(index, 6) * 55}ms` }}
+      aria-label={`${segment.airlineName} ${segment.flightNumber}, ${depTime} to ${arrTime}, from ${convertPrice(
+        selectedTier.priceInr + selectedTier.taxesInr,
+        currency
+      )}`}
+      className="spotlight-card rounded-[var(--radius-card)] border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-[var(--shadow-card)]"
     >
-      {/* Summary Row */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-        {/* Col 1: Airline & Number (3 cols) */}
-        <div className="md:col-span-3 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-hairline)] flex items-center justify-center font-bold text-xs font-mono text-[var(--text-primary)] shrink-0">
-            {segment.airlineCode}
+      <div className="p-4 sm:p-6">
+        {/* Tag row */}
+        {(tags.length > 0 || lowSeats) && (
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            {tags.map((t) => (
+              <span
+                key={t}
+                className={`rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${
+                  t === 'cheapest'
+                    ? 'bg-[var(--semantic-success-soft)] text-[var(--semantic-success)]'
+                    : 'bg-[var(--accent-soft)] text-[var(--accent-primary)]'
+                }`}
+              >
+                {t}
+              </span>
+            ))}
+            {lowSeats && (
+              <span className="rounded-full bg-[var(--semantic-warning-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--semantic-warning)]">
+                {flight.seatsRemaining === 1 ? 'Last seat' : `${flight.seatsRemaining} seats left`} at this fare
+              </span>
+            )}
           </div>
-          <div>
-            <div className="text-sm font-semibold text-[var(--text-primary)]">
-              {segment.airlineName}
-            </div>
-            <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mt-0.5">
-              <span className="font-mono">{segment.flightNumber}</span>
-              <span>·</span>
-              <span className="text-[11px] truncate max-w-[120px]">{segment.aircraft}</span>
-            </div>
-          </div>
-        </div>
+        )}
 
-        {/* Col 2: Times, Curved Route Arc & Duration (6 cols) */}
-        <div className="md:col-span-6 flex items-center justify-between px-2 sm:px-4">
-          {/* Departure */}
-          <div className="text-left">
-            <div className="text-xl sm:text-2xl font-semibold text-[var(--text-primary)] tabular-nums">
-              {depTime}
+        <div className="grid grid-cols-1 items-center gap-5 md:grid-cols-12">
+          {/* Airline */}
+          <div className="flex items-center gap-3 md:col-span-3">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[12px] border border-[var(--border-hairline)] bg-[var(--bg-subtle)] font-mono text-xs font-semibold text-[var(--text-primary)]">
+              {segment.airlineCode}
             </div>
-            <div className="text-xs font-bold text-[var(--text-secondary)] font-mono mt-0.5">
-              {segment.origin.code}
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-[var(--text-primary)]">{segment.airlineName}</div>
+              <div className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
+                <span className="font-mono">{segment.flightNumber}</span> · {segment.aircraft}
+              </div>
             </div>
           </div>
 
-          {/* Curved Route Arc SVG with duration & stop pill */}
-          <div className="flex-1 px-4 text-center">
-            <span className="text-[11px] font-semibold text-[var(--text-muted)] tabular-nums">
-              {durationStr}
-            </span>
-            <div className="relative my-1 flex items-center justify-center">
-              {/* Smooth Minimalist Route Line */}
-              <svg className="w-full h-5 overflow-visible" viewBox="0 0 160 20">
-                <path
-                  d="M 5 15 Q 80 -4 155 15"
-                  fill="none"
-                  stroke="var(--border-strong)"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  className="route-arc-path"
+          {/* Times & route */}
+          <div className="flex items-center justify-between gap-3 md:col-span-6 md:px-2">
+            <div>
+              <div className="text-[22px] font-semibold tracking-[-0.02em] text-[var(--text-primary)] tabular-nums sm:text-2xl">
+                {depTime}
+              </div>
+              <div className="mt-0.5 font-mono text-xs font-semibold text-[var(--text-secondary)]">
+                {segment.origin.code}
+              </div>
+            </div>
+
+            <div className="flex-1 px-1 text-center sm:px-3">
+              <div className="text-[11px] font-medium text-[var(--text-muted)] tabular-nums">
+                {formatDuration(flight.totalDurationMinutes)}
+              </div>
+              <div className="relative my-1.5 flex items-center" aria-hidden="true">
+                <span className="h-1.5 w-1.5 rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)]" />
+                <span className="h-px flex-1 bg-[var(--border-strong)]" />
+                {flight.stops > 0 && (
+                  <>
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--semantic-warning)]" />
+                    <span className="h-px flex-1 bg-[var(--border-strong)]" />
+                  </>
+                )}
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-primary)]" />
+              </div>
+              <div
+                className={`text-[11px] font-semibold ${
+                  flight.stops === 0 ? 'text-[var(--semantic-success)]' : 'text-[var(--semantic-warning)]'
+                }`}
+              >
+                {flight.stops === 0
+                  ? 'Non-stop'
+                  : `${flight.stops} stop · ${flight.segments
+                      .slice(0, -1)
+                      .map((s) => s.destination.code)
+                      .join(', ')}`}
+              </div>
+            </div>
+
+            <div className="text-right">
+              <div className="text-[22px] font-semibold tracking-[-0.02em] text-[var(--text-primary)] tabular-nums sm:text-2xl">
+                {arrTime}
+                {arrivesNextDay && (
+                  <sup className="ml-0.5 text-[10px] font-semibold text-[var(--semantic-warning)]">+1</sup>
+                )}
+              </div>
+              <div className="mt-0.5 font-mono text-xs font-semibold text-[var(--text-secondary)]">
+                {lastSegment.destination.code}
+              </div>
+            </div>
+          </div>
+
+          {/* Price & actions */}
+          <div className="flex items-end justify-between gap-3 border-t border-[var(--border-hairline)] pt-4 md:col-span-3 md:flex-col md:items-end md:border-l md:border-t-0 md:pl-6 md:pt-0">
+            <div className="md:text-right">
+              <div
+                key={`${currency}-${selectedTier.id}`}
+                className="animate-fade-up text-2xl font-semibold tracking-[-0.02em] text-[var(--text-primary)] tabular-nums"
+              >
+                {convertPrice(selectedTier.priceInr + selectedTier.taxesInr, currency)}
+              </div>
+              <div className="text-[11px] text-[var(--text-muted)]">
+                {selectedTier.name} · incl. taxes
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onToggleSave(flight.id)}
+                aria-pressed={isSaved}
+                aria-label={isSaved ? `Remove ${segment.flightNumber} from saved` : `Save ${segment.flightNumber}`}
+                className={`btn h-9 w-9 p-0 ${isSaved ? 'btn-accent' : 'btn-secondary'}`}
+              >
+                <Bookmark className={`h-4 w-4 transition-transform duration-300 ${isSaved ? 'scale-110 fill-current' : ''}`} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                aria-expanded={expanded}
+                aria-controls={detailsId}
+                className="btn btn-secondary h-9 px-3 text-xs"
+              >
+                Fares
+                <ChevronDown
+                  className={`h-3.5 w-3.5 transition-transform duration-300 ease-out-expo ${expanded ? 'rotate-180' : ''}`}
                 />
-                <circle cx="5" cy="15" r="2.5" fill="var(--text-muted)" />
-                <circle cx="155" cy="15" r="2.5" fill="var(--accent-primary)" />
-              </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => onSelectFare(flight, selectedTier)}
+                className="btn btn-primary h-9 px-4 text-xs"
+              >
+                Select
+              </button>
             </div>
-            <span
-              className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                flight.stops === 0
-                  ? 'bg-[var(--semantic-success)]/10 text-[var(--semantic-success)]'
-                  : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)]'
-              }`}
-            >
-              {flight.stops === 0 ? 'Non-stop' : `${flight.stops} stop`}
-            </span>
-          </div>
-
-          {/* Arrival */}
-          <div className="text-right">
-            <div className="text-xl sm:text-2xl font-semibold text-[var(--text-primary)] tabular-nums">
-              {arrTime}
-            </div>
-            <div className="text-xs font-bold text-[var(--text-secondary)] font-mono mt-0.5">
-              {lastSegment.destination.code}
-            </div>
-          </div>
-        </div>
-
-        {/* Col 3: Price & Select CTA (3 cols) */}
-        <div className="md:col-span-3 text-right flex flex-col items-end justify-center border-t md:border-t-0 md:border-l border-[var(--border-hairline)] pt-3 md:pt-0 md:pl-5">
-          <div className="text-2xl font-semibold text-[var(--text-primary)] tabular-nums">
-            {convertPrice(selectedTier.priceInr + selectedTier.taxesInr, currency)}
-          </div>
-          <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-            Total known payable · Zero fees
-          </div>
-
-          <div className="mt-3 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setExpanded(!expanded)}
-              className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1 font-medium transition-colors"
-            >
-              <span>{expanded ? 'Less' : 'Details'}</span>
-              {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onSelectFare(flight, selectedTier)}
-              className="magnetic-btn px-4 py-2 rounded-[var(--radius-pill)] bg-[var(--text-primary)] hover:bg-[var(--accent-primary)] text-white text-xs font-semibold shadow-sm transition-all touch-target"
-            >
-              Select Fare
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Expandable Accordion Panel */}
-      {expanded && (
-        <div className="mt-5 pt-5 border-t border-[var(--border-hairline)] animate-in fade-in duration-200">
-          {/* Segment Details */}
-          <div className="space-y-3 mb-6">
-            {flight.segments.map((seg, i) => (
-              <div
-                key={seg.id}
-                className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-hairline)] text-xs flex flex-wrap items-center justify-between gap-3"
-              >
-                <div>
-                  <span className="font-semibold text-[var(--text-primary)]">
-                    {seg.origin.city} ({seg.origin.code}, {seg.terminalOrigin}) →{' '}
-                    {seg.destination.city} ({seg.destination.code}, {seg.terminalDest})
+      {/* Expandable fare & segment details */}
+      <div id={detailsId} className="collapsible" data-open={expanded}>
+        <div className="collapsible-inner">
+          <div className="border-t border-[var(--border-hairline)] px-4 pb-5 pt-5 sm:px-6">
+            <ol className="mb-5 space-y-2">
+              {flight.segments.map((seg) => (
+                <li
+                  key={seg.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] bg-[var(--bg-subtle)] px-4 py-3 text-xs"
+                >
+                  <span className="font-medium text-[var(--text-primary)]">
+                    {seg.origin.city} <span className="text-[var(--text-muted)]">({seg.origin.code} · {seg.terminalOrigin})</span>
+                    <span className="mx-1.5 text-[var(--text-muted)]">→</span>
+                    {seg.destination.city}{' '}
+                    <span className="text-[var(--text-muted)]">({seg.destination.code} · {seg.terminalDest})</span>
                   </span>
-                  <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                    {seg.airlineName} {seg.flightNumber} · {seg.aircraft}
-                  </div>
-                </div>
-                <div className="text-[11px] font-semibold text-[var(--text-secondary)] tabular-nums">
-                  Duration: {Math.floor(seg.durationMinutes / 60)}h {seg.durationMinutes % 60}m
-                </div>
-              </div>
-            ))}
-          </div>
+                  <span className="text-[var(--text-secondary)] tabular-nums">
+                    {seg.flightNumber} · {formatDuration(seg.durationMinutes)}
+                  </span>
+                </li>
+              ))}
+            </ol>
 
-          {/* 3 Selectable Fare Tier Cards */}
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-3">
-              Choose Fare Option
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                Choose a fare
+              </h3>
+              <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
+                <Users className="h-3 w-3" /> {flight.onTimePercent}% on time
+              </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+            <div role="radiogroup" aria-label="Fare options" className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
               {flight.fareTiers.map((tier) => {
-                const isTierSelected = tier.id === selectedTier.id;
+                const selected = tier.id === selectedTier.id;
                 return (
-                  <div
+                  <button
                     key={tier.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
                     onClick={() => setSelectedTier(tier)}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                      isTierSelected
-                        ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)] shadow-sm'
-                        : 'border-[var(--border-hairline)] bg-white hover:border-[var(--border-strong)]'
+                    className={`group relative rounded-[var(--radius-control)] border p-4 text-left transition-[border-color,background-color,box-shadow] duration-200 ${
+                      selected
+                        ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)] shadow-[0_0_0_3px_var(--accent-soft)]'
+                        : 'border-[var(--border-hairline)] bg-[var(--bg-surface)] hover:border-[var(--border-strong)]'
                     }`}
                   >
-                    <div className="flex justify-between items-start">
-                      <span className="font-semibold text-xs text-[var(--text-primary)]">
-                        {tier.name}
+                    <span className="flex items-start justify-between">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">{tier.name}</span>
+                      <span
+                        className={`grid h-5 w-5 place-items-center rounded-full border transition-colors ${
+                          selected
+                            ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white'
+                            : 'border-[var(--border-strong)]'
+                        }`}
+                      >
+                        {selected && <Check className="h-3 w-3" />}
                       </span>
-                      {isTierSelected && <Check className="w-4 h-4 text-[var(--accent-primary)]" />}
-                    </div>
-
-                    <div className="text-lg font-semibold text-[var(--text-primary)] mt-2 tabular-nums">
+                    </span>
+                    <span className="mt-2 block text-lg font-semibold tracking-[-0.02em] text-[var(--text-primary)] tabular-nums">
                       {convertPrice(tier.priceInr + tier.taxesInr, currency)}
-                    </div>
-                    <div className="text-[10px] text-[var(--text-muted)]">Includes taxes & fees</div>
-
-                    <ul className="mt-3 space-y-1.5 text-[11px] text-[var(--text-secondary)]">
-                      <li className="flex items-center gap-1.5">
-                        <Luggage className="w-3 h-3 text-[var(--text-muted)]" />
-                        <span>{tier.checkinBagKg} kg Check-in bag</span>
-                      </li>
-                      <li className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--border-strong)]"></span>
-                        <span>{tier.cancellationFeeInr ? `₹${tier.cancellationFeeInr} cancel fee` : 'Free cancel'}</span>
-                      </li>
-                      <li className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--border-strong)]"></span>
-                        <span>{tier.mealIncluded ? 'Complimentary Meal' : 'Meals chargeable'}</span>
-                      </li>
-                    </ul>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectFare(flight, tier);
-                      }}
-                      className="w-full mt-4 py-2 rounded-lg bg-[var(--text-primary)] hover:bg-[var(--accent-primary)] text-white text-xs font-semibold transition-colors"
-                    >
-                      Choose Seat →
-                    </button>
-                  </div>
+                    </span>
+                    <span className="block text-[11px] text-[var(--text-muted)] tabular-nums">
+                      {convertPrice(tier.priceInr, currency)} fare + {convertPrice(tier.taxesInr, currency)} taxes
+                    </span>
+                    <span className="mt-3 block space-y-1.5 text-xs text-[var(--text-secondary)]">
+                      <span className="flex items-center gap-2">
+                        <Luggage className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                        {tier.cabinBagKg} kg cabin · {tier.checkinBagKg ? `${tier.checkinBagKg} kg check-in` : 'No check-in bag'}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <RotateCcw className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                        {!tier.cancellationFeeInr
+                          ? 'Free cancellation'
+                          : `${convertPrice(tier.cancellationFeeInr, currency)} cancellation fee`}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <Utensils className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                        {tier.mealIncluded ? 'Meal included' : 'Meals for purchase'}
+                      </span>
+                    </span>
+                  </button>
                 );
               })}
             </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => onSelectFare(flight, selectedTier)}
+                className="btn btn-accent h-10 px-5 text-sm"
+              >
+                Choose seat with {selectedTier.name}
+              </button>
+            </div>
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    </article>
   );
 }

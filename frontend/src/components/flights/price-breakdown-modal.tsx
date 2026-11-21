@@ -28,12 +28,12 @@ export function PriceBreakdownModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-mono">
+              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-mono">
                 {flightNumber}
               </span>
               <span className="text-xs text-slate-500 font-medium">{airlineName}</span>
@@ -51,7 +51,7 @@ export function PriceBreakdownModal({
         {/* Content Body */}
         <div className="p-6 space-y-6">
           {/* Formula Display */}
-          <div className="p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200/80 text-xs text-amber-900 flex items-center gap-2">
+          <div className="p-3.5 bg-blue-50/60 rounded-2xl border border-blue-200/80 text-xs text-blue-900 flex items-center gap-2">
             <span className="font-bold">Formula:</span>
             <span>Total Payable = Base Fare + Airline Taxes + Mandatory Fees</span>
           </div>
@@ -125,7 +125,7 @@ export function PriceBreakdownModal({
             href={offer.deepLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-6 py-2.5 rounded-full bg-navy text-white text-xs font-bold hover:bg-navy-light transition-all shadow-md"
+            className="px-6 py-2.5 rounded-full bg-navy text-white text-xs font-bold hover:bg-blue-700 transition-all shadow-md"
           >
             Book on {offer.supplierName} →
           </a>

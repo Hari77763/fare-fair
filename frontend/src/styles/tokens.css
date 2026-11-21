@@ -1,30 +1,48 @@
 /* ==============================================================================
-   Swiss-Editorial Spatial Minimalism — Design Tokens & Isolation Architecture
+   FareFair design tokens — Swiss-editorial, high-trust aviation.
+   One accent (ink blue), one trust signal (teal), semantic states only.
    ============================================================================== */
 
 :root {
-  /* Color Tokens (Light-First, High-Trust Aviation) */
-  --bg-canvas: #F8FAFC;
+  color-scheme: light;
+
+  /* Surfaces */
+  --bg-canvas: #F7F8FA;
   --bg-surface: #FFFFFF;
-  --bg-subtle: #F1F5F9;
-  --bg-elevated: rgba(255, 255, 255, 0.97);
-  --border-hairline: #E2E8F0;
-  --border-strong: #CBD5E1;
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --text-muted: #64748B;
+  --bg-subtle: #F1F4F8;
+  --bg-elevated: rgba(255, 255, 255, 0.82);
+  --bg-inverse: #0B1220;
+
+  /* Lines */
+  --border-hairline: #E4E8EE;
+  --border-strong: #CDD5E0;
+
+  /* Ink */
+  --text-primary: #0B1220;
+  --text-secondary: #46536A;
+  --text-muted: #6B778C;
+  --text-inverse: #F8FAFC;
+
+  /* Accent */
   --accent-primary: #1D4ED8;
   --accent-hover: #1E40AF;
-  --accent-soft: rgba(29, 78, 216, 0.08);
-  --semantic-success: #059669;
-  --semantic-warning: #D97706;
-  --semantic-danger: #DC2626;
+  --accent-soft: rgba(29, 78, 216, 0.07);
+  --accent-ring: rgba(29, 78, 216, 0.28);
 
-  /* Elevation Shadows */
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-hover: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 4px 10px -6px rgba(15, 23, 42, 0.04);
-  --shadow-sticky: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
-  --shadow-sheet: 0 -12px 40px -8px rgba(15, 23, 42, 0.16);
+  /* Semantic */
+  --semantic-success: #047857;
+  --semantic-success-soft: rgba(4, 120, 87, 0.09);
+  --semantic-trust: #0F766E;
+  --semantic-warning: #B45309;
+  --semantic-warning-soft: rgba(180, 83, 9, 0.09);
+  --semantic-danger: #B91C1C;
+
+  /* Elevation — layered, low-opacity, cool-tinted */
+  --shadow-card: 0 1px 2px rgba(11, 18, 32, 0.04), 0 0 0 1px rgba(11, 18, 32, 0.02);
+  --shadow-hover: 0 1px 2px rgba(11, 18, 32, 0.04), 0 12px 32px -12px rgba(11, 18, 32, 0.14);
+  --shadow-float: 0 2px 4px rgba(11, 18, 32, 0.04), 0 24px 48px -16px rgba(11, 18, 32, 0.18);
+  --shadow-sticky: 0 1px 0 rgba(11, 18, 32, 0.06), 0 8px 24px -12px rgba(11, 18, 32, 0.12);
+  --shadow-sheet: 0 -12px 40px -8px rgba(11, 18, 32, 0.18);
 
   /* Z-Index Hierarchy */
   --z-base: 1;
@@ -36,34 +54,43 @@
   --z-tooltip: 70;
   --z-toast: 80;
 
-  /* Radii */
+  /* Radii — three steps only */
   --radius-card: 16px;
   --radius-control: 12px;
   --radius-pill: 9999px;
   --radius-sheet: 24px 24px 0 0;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 420ms;
+
+  --header-h: 64px;
 }
 
-/* Mandatory Numeric Alignment Rule */
+/* Numeric alignment for prices, times, counts */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
-  -webkit-font-feature-settings: "tnum";
   font-feature-settings: "tnum";
 }
 
-/* GPU Composited Transitions & Animations */
-.hardware-accelerated {
-  transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
-  perspective: 1000px;
-  will-change: transform, opacity;
+/* ------------------------------------------------------------------ surfaces */
+
+.surface-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
-/* Spotlight Border Effect (Desktop Fine Pointer Only) */
+/* Spotlight border (fine pointers only) */
 @media (hover: hover) and (pointer: fine) {
   .spotlight-card {
     position: relative;
-    border: 1px solid var(--border-hairline);
-    transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out),
+      border-color var(--dur-base) var(--ease-out);
   }
 
   .spotlight-card::before {
@@ -73,8 +100,8 @@
     border-radius: inherit;
     padding: 1px;
     background: radial-gradient(
-      360px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
-      rgba(29, 78, 216, 0.35),
+      320px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+      rgba(29, 78, 216, 0.38),
       transparent 45%
     );
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -82,7 +109,7 @@
     mask-composite: exclude;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 220ms ease;
+    transition: opacity var(--dur-base) ease;
   }
 
   .spotlight-card:hover::before {
@@ -94,83 +121,331 @@
     box-shadow: var(--shadow-hover);
   }
 
-  /* Magnetic CTA Button with spring physics */
-  .magnetic-btn {
-    transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1), background-color 150ms ease;
-    will-change: transform;
+  .lift-on-hover {
+    transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
   }
-
-  .btn-hover-elevate:hover {
-    background-color: var(--accent-hover);
+  .lift-on-hover:hover {
+    transform: translate3d(0, -2px, 0);
+    box-shadow: var(--shadow-hover);
   }
 }
 
-/* Mobile Touch Ergonomics (pointer: coarse) */
-@media (pointer: coarse) {
-  .touch-target {
-    min-height: 48px;
-    min-width: 48px;
-  }
+/* ------------------------------------------------------------------- buttons */
 
-  .touch-press {
-    transition: transform 90ms ease-out, background-color 90ms ease-out;
-  }
-
-  .touch-press:active {
-    transform: scale(0.98);
-    background-color: var(--bg-subtle) !important;
-  }
-
-  /* Avoid sticky hover artifacts on mobile devices */
-  .spotlight-card:hover {
-    transform: none;
-    box-shadow: var(--shadow-card);
-  }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  user-select: none;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease,
+    box-shadow var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) ease;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
-/* Momentum Scrollbar Styling */
+.btn-primary {
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  box-shadow: 0 1px 2px rgba(11, 18, 32, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-primary);
+  box-shadow: 0 8px 20px -8px rgba(29, 78, 216, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.btn-accent {
+  background: var(--accent-primary);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(29, 78, 216, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+.btn-accent:hover:not(:disabled) {
+  background: var(--accent-hover);
+  box-shadow: 0 10px 24px -10px rgba(29, 78, 216, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.btn-secondary {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-hairline);
+  box-shadow: 0 1px 2px rgba(11, 18, 32, 0.04);
+}
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--bg-subtle);
+}
+
+.btn-ghost {
+  color: var(--text-secondary);
+}
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+}
+
+/* Segmented controls with a sliding thumb (position set inline via CSS vars) */
+.segmented {
+  position: relative;
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+}
+.segmented-thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface);
+  box-shadow: 0 1px 2px rgba(11, 18, 32, 0.08), 0 0 0 1px rgba(11, 18, 32, 0.04);
+  transition: transform 320ms var(--ease-spring), width 320ms var(--ease-spring);
+  will-change: transform;
+}
+
+/* --------------------------------------------------------------- form fields */
+
+.field {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-control);
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-base) var(--ease-out),
+    background-color var(--dur-fast) ease;
+}
+.field:hover {
+  border-color: var(--border-strong);
+}
+.field:focus-within,
+.field[data-open="true"] {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.875rem;
+  border-radius: var(--radius-control);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-base) var(--ease-out);
+}
+.input::placeholder {
+  color: var(--text-muted);
+}
+.input:hover {
+  border-color: var(--border-strong);
+}
+.input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.input[aria-invalid="true"] {
+  border-color: var(--semantic-danger);
+  box-shadow: 0 0 0 4px rgba(185, 28, 28, 0.08);
+}
+
+/* Range slider with filled track; --fill is set inline (0–100%) */
+.range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--accent-primary) 0%,
+    var(--accent-primary) var(--fill, 50%),
+    var(--border-hairline) var(--fill, 50%),
+    var(--border-hairline) 100%
+  );
+  cursor: pointer;
+}
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 1px 3px rgba(11, 18, 32, 0.18);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+.range::-webkit-slider-thumb:hover,
+.range:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 6px var(--accent-soft), 0 1px 3px rgba(11, 18, 32, 0.18);
+}
+.range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 1px 3px rgba(11, 18, 32, 0.18);
+}
+
+/* Switch (button role="switch") */
+.switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: var(--border-strong);
+  transition: background-color var(--dur-base) var(--ease-out);
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(11, 18, 32, 0.25);
+  transition: transform 260ms var(--ease-spring);
+}
+.switch[aria-checked="true"] {
+  background: var(--accent-primary);
+}
+.switch[aria-checked="true"]::after {
+  transform: translateX(16px);
+}
+
+/* Collapsible region animated via grid rows (no height measuring, no layout jank) */
+.collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 360ms var(--ease-out);
+}
+.collapsible[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+.collapsible > .collapsible-inner {
+  overflow: hidden;
+  min-height: 0;
+  /* Hidden content leaves the tab order and a11y tree once collapsed */
+  visibility: hidden;
+  transition: visibility 0s linear 360ms;
+}
+.collapsible[data-open="true"] > .collapsible-inner {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+/* -------------------------------------------------------------------- motion */
+
+/* Scroll-reveal: elements start hidden only once JS confirms it can reveal them */
+.js-reveal [data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 14px, 0);
+  transition: opacity 640ms var(--ease-out), transform 640ms var(--ease-out);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.js-reveal [data-reveal][data-revealed="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes toast-progress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* Static hero backdrop: soft light + faint grid, no continuous animation */
+.hero-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.hero-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: -20% -10% auto -10%;
+  height: 120%;
+  background:
+    radial-gradient(40% 50% at 20% 20%, rgba(29, 78, 216, 0.08), transparent 70%),
+    radial-gradient(35% 45% at 85% 10%, rgba(15, 118, 110, 0.07), transparent 70%);
+}
+.hero-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(11, 18, 32, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(11, 18, 32, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 20%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 20%, #000 30%, transparent 75%);
+}
+
+/* Skeleton shimmer */
+@keyframes shimmerWave {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-subtle) 25%, #E7EBF1 50%, var(--bg-subtle) 75%);
+  background-size: 200% 100%;
+  animation: shimmerWave 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* Horizontal momentum scroll */
 .scroll-momentum-x {
   overflow-x: auto;
-  scroll-snap-type: x mandatory;
+  scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
   scrollbar-width: none;
 }
 .scroll-momentum-x::-webkit-scrollbar {
   display: none;
 }
-
-/* SVG Route Arc Draw-in Transition */
-.route-arc-path {
-  stroke-dasharray: 100;
-  stroke-dashoffset: 0;
-  transition: stroke-dashoffset 550ms cubic-bezier(0.22, 1, 0.36, 1);
+.scroll-momentum-x > * {
+  scroll-snap-align: start;
 }
 
-/* Skeleton Shimmer Pulse */
-@keyframes shimmerWave {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+/* Touch ergonomics */
+@media (pointer: coarse) {
+  .touch-target {
+    min-height: 44px;
+  }
+  .spotlight-card:hover,
+  .lift-on-hover:hover {
+    transform: none;
+    box-shadow: var(--shadow-card);
+  }
 }
 
-.skeleton-shimmer {
-  background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
-  background-size: 200% 100%;
-  animation: shimmerWave 1.4s infinite ease-in-out;
-}
-
-/* Reduced Motion Override */
+/* Reduced motion: keep state changes, drop movement */
 @media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after {
+  *,
+  ::before,
+  ::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .spotlight-card:hover {
-    transform: none !important;
-  }
-  .route-arc-path {
-    stroke-dashoffset: 0 !important;
+  .js-reveal [data-reveal] {
+    opacity: 1;
+    transform: none;
   }
 }

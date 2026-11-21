@@ -57,10 +57,14 @@ farefair/
 
 ```bash
 cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
 python -m uvicorn main:app --reload --port 8000
 ```
 - API Docs: `http://localhost:8000/docs`
 - Health check: `http://localhost:8000/health`
+- Development login (non-production only): `user@fairfare.in` / `demo12345`
+- `JWT_SECRET_KEY` may be left empty in development (a random key is generated per process). It is **required** when `ENV=production`; the API refuses to start without it.
 
 ### 2. Run Frontend (Next.js)
 
@@ -69,7 +73,27 @@ cd frontend
 npm install
 npm run dev
 ```
-Open `http://localhost:3000` in your browser.
+Open `http://localhost:3000` in your browser. The web app currently runs entirely on bundled demo data and does not call the backend.
+
+### 3. Checks
+
+```bash
+cd backend && python -m pytest -q          # API + auth regression tests
+cd frontend && npm test                     # Vitest unit tests
+cd frontend && npm run lint && npm run typecheck && npm run build
+```
+
+---
+
+## Deployment (Vercel)
+
+The deployable web app is the Next.js project in `frontend/`.
+
+- **Root Directory:** `frontend`
+- **Framework preset:** Next.js (auto-detected) — default build (`next build`) and output settings
+- **Environment variables:** none required (no secrets are used by the frontend)
+
+The FastAPI backend is not deployed to Vercel; it needs PostgreSQL and Redis and is intended for container hosting (see `infrastructure/docker`).
 
 ---
 

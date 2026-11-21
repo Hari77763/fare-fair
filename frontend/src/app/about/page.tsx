@@ -5,16 +5,16 @@ import { ShieldCheck, Target, Heart, Award } from "lucide-react";
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-[var(--bg-canvas)] flex flex-col">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-8 py-16 flex-1 w-full">
+      <main id="main" className="max-w-4xl mx-auto px-4 sm:px-8 py-16 flex-1 w-full">
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-600 px-3 py-1 bg-amber-50 rounded-full border border-amber-200">
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-600 px-3 py-1 bg-blue-50 rounded-full border border-blue-200">
             Our Mission
           </span>
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-navy tracking-tight mt-4">
+          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-navy tracking-tight mt-4">
             About FareFair
           </h1>
           <p className="text-sm text-slate-600 mt-4 leading-relaxed">
@@ -23,7 +23,7 @@ export default function AboutPage() {
         </div>
 
         {/* Narrative */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 shadow-sm space-y-8 text-sm text-slate-700 leading-relaxed mb-12">
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-8 sm:p-12 shadow-sm space-y-8 text-sm text-slate-700 leading-relaxed mb-12">
           <div>
             <h2 className="text-xl font-bold text-navy mb-3">Why FareFair Exists</h2>
             <p>

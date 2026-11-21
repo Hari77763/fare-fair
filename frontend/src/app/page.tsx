@@ -1,16 +1,22 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Navigation } from '../components/Navigation';
-import { HeroSearch } from '../components/HeroSearch';
-import { StickyHeader } from '../components/StickyHeader';
-import { FlexibleFareStrip } from '../components/FlexibleFareStrip';
-import { FilterSidebar } from '../components/FilterSidebar';
-import { FlightCard } from '../components/FlightCard';
-import { SeatMapModal } from '../components/SeatMapModal';
-import { BookingToast } from '../components/BookingToast';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { ArrowUpRight, Bookmark, Info, SlidersHorizontal } from 'lucide-react';
 
-import {
+import { Navbar } from '@/components/navbar';
+import { Footer } from '@/components/footer';
+import { ScrollProgress } from '@/components/ScrollProgress';
+import { HeroSearch, type Passengers } from '@/components/HeroSearch';
+import { StickyHeader } from '@/components/StickyHeader';
+import { FlexibleFareStrip } from '@/components/FlexibleFareStrip';
+import { FilterSidebar, PRICE_MAX_INR } from '@/components/FilterSidebar';
+import { FlightCard } from '@/components/FlightCard';
+import { SeatMapModal } from '@/components/SeatMapModal';
+import { BookingToast } from '@/components/BookingToast';
+import { useReveal } from '@/hooks/useReveal';
+
+import type {
   CurrencyCode,
   TripType,
   CabinClass,
@@ -19,59 +25,82 @@ import {
   FareTier,
   SortOption,
   TimeWindow,
-} from '../types/flight';
-import { majorAirports, mockItineraries, mockDayFares } from '../data/mockFlights';
-import { useScrollProgress } from '../hooks/useScrollProgress';
-import { usePointerType } from '../hooks/usePointerType';
-import { SlidersHorizontal } from 'lucide-react';
+} from '@/types/flight';
+import { majorAirports, mockItineraries, mockDayFares } from '@/data/mockFlights';
+
+// Sample itineraries cover a single route; other routes show an honest notice.
+const SAMPLE_ROUTE = { origin: 'DEL', destination: 'BOM' };
+
+const lowestTotal = (f: FlightItinerary) => f.fareTiers[0].priceInr + f.fareTiers[0].taxesInr;
+
+function prefersReducedMotion() {
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function ResultSkeleton() {
+  return (
+    <div className="rounded-[var(--radius-card)] border border-[var(--border-hairline)] bg-[var(--bg-surface)] p-5 sm:p-6" aria-hidden="true">
+      <div className="grid grid-cols-1 items-center gap-5 md:grid-cols-12">
+        <div className="flex items-center gap-3 md:col-span-3">
+          <div className="skeleton h-11 w-11 rounded-[12px]" />
+          <div className="space-y-2">
+            <div className="skeleton h-3.5 w-24" />
+            <div className="skeleton h-3 w-32" />
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-4 md:col-span-6">
+          <div className="skeleton h-7 w-16" />
+          <div className="skeleton h-2 flex-1" />
+          <div className="skeleton h-7 w-16" />
+        </div>
+        <div className="flex justify-end md:col-span-3">
+          <div className="skeleton h-9 w-28" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function FlightBookingApp() {
-  // Global State
+  // Global
   const [currency, setCurrency] = useState<CurrencyCode>('INR');
-  const [savedCount, setSavedCount] = useState(0);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
 
-  // Search State
+  // Search
   const [tripType, setTripType] = useState<TripType>('one-way');
-  const [origin, setOrigin] = useState<Airport>(majorAirports[0]); // DEL
-  const [destination, setDestination] = useState<Airport>(majorAirports[1]); // BOM
+  const [origin, setOrigin] = useState<Airport>(majorAirports[0]);
+  const [destination, setDestination] = useState<Airport>(majorAirports[1]);
   const [departureDate, setDepartureDate] = useState('2026-12-14');
   const [returnDate, setReturnDate] = useState<string | undefined>('2026-12-21');
-  const [passengers, setPassengers] = useState({ adults: 1, children: 0, infants: 0 });
+  const [passengers, setPassengers] = useState<Passengers>({ adults: 1, children: 0, infants: 0 });
   const [cabinClass, setCabinClass] = useState<CabinClass>('Economy');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchedRoute, setSearchedRoute] = useState(SAMPLE_ROUTE);
 
-  // Sticky Header & Sentinel Observer State
+  // Sticky summary
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const originInputRef = useRef<HTMLInputElement>(null);
+  const originTriggerRef = useRef<HTMLButtonElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const [isStickyVisible, setIsStickyVisible] = useState(false);
 
-  // Scroll Progress and Parallax
-  const { scrollProgress, scrollY, prefersReducedMotion } = useScrollProgress();
-  const { isFinePointer } = usePointerType();
-
-  // Flexible Date Strip State
+  // Flexible dates
   const [selectedDayISO, setSelectedDayISO] = useState('2026-12-14');
   const [isFareStripLoading, setIsFareStripLoading] = useState(false);
+  const timers = useRef<number[]>([]);
 
-  // Filter & Sort Pipeline State
+  // Filters
   const [sortOption, setSortOption] = useState<SortOption>('best');
-  const [maxPriceInr, setMaxPriceInr] = useState<number>(20000);
+  const [maxPriceInr, setMaxPriceInr] = useState<number>(PRICE_MAX_INR);
   const [selectedStops, setSelectedStops] = useState<number[]>([]);
   const [selectedTimeWindows, setSelectedTimeWindows] = useState<TimeWindow[]>([]);
   const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
-  const [requireCheckedBag, setRequireCheckedBagChange] = useState<boolean>(false);
-  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState<boolean>(false);
+  const [requireCheckedBag, setRequireCheckedBag] = useState(false);
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
-  // Seat Map & Booking State
-  const [selectedFlightForSeat, setSelectedFlightForSeat] = useState<FlightItinerary | null>(null);
-  const [selectedTierForSeat, setSelectedTierForSeat] = useState<FareTier | null>(null);
-  const [bookingToast, setBookingToast] = useState<{
-    isOpen: boolean;
-    bookingRef: string;
-    flightNumber: string;
-    route: string;
-    seatId: string;
-    totalInr: number;
-  }>({
+  // Seat map & confirmation
+  const [seatSelection, setSeatSelection] = useState<{ flight: FlightItinerary; tier: FareTier } | null>(null);
+  const [bookingToast, setBookingToast] = useState({
     isOpen: false,
     bookingRef: '',
     flightNumber: '',
@@ -80,166 +109,174 @@ export default function FlightBookingApp() {
     totalInr: 0,
   });
 
-  // IntersectionObserver for Sticky Header Sentinel
+  // Clear pending timers on unmount so no state updates fire afterwards
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
+  const later = (fn: () => void, ms: number) => {
+    timers.current.push(window.setTimeout(fn, ms));
+  };
+
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
-
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        // When sentinel scrolls above viewport top, show sticky header
-        setIsStickyVisible(!entry.isIntersecting && entry.boundingClientRect.top < 0);
-      },
+      ([entry]) => setIsStickyVisible(!entry.isIntersecting && entry.boundingClientRect.top < 0),
       { threshold: 0 }
     );
-
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, []);
 
-  // Handle Date Strip Switch with simulated 200ms shimmer
-  const handleSelectDay = (dateISO: string) => {
-    setSelectedDayISO(dateISO);
-    setDepartureDate(dateISO);
-    setIsFareStripLoading(true);
-    setTimeout(() => {
-      setIsFareStripLoading(false);
-    }, 200);
-  };
+  // Airline filter options come from the data, not a hard-coded list
+  const airlineOptions = useMemo(() => {
+    const map = new Map<string, { code: string; name: string; lowestInr: number }>();
+    for (const f of mockItineraries) {
+      const seg = f.segments[0];
+      const price = lowestTotal(f);
+      const existing = map.get(seg.airlineCode);
+      if (!existing || price < existing.lowestInr) {
+        map.set(seg.airlineCode, { code: seg.airlineCode, name: seg.airlineName, lowestInr: price });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.lowestInr - b.lowestInr);
+  }, []);
 
-  // Filter & Sort Engine
   const filteredFlights = useMemo(() => {
     return mockItineraries
       .filter((flight) => {
-        const lowestFare = flight.fareTiers[0].priceInr + flight.fareTiers[0].taxesInr;
-
-        // Price filter
-        if (lowestFare > maxPriceInr) return false;
-
-        // Stops filter
+        if (showSavedOnly && !savedIds.includes(flight.id)) return false;
+        if (maxPriceInr < PRICE_MAX_INR && lowestTotal(flight) > maxPriceInr) return false;
         if (selectedStops.length > 0 && !selectedStops.includes(flight.stops)) return false;
-
-        // Airline filter
-        if (selectedAirlines.length > 0) {
-          const airline = flight.segments[0].airlineCode;
-          if (!selectedAirlines.includes(airline)) return false;
-        }
-
-        // Baggage filter
+        if (selectedAirlines.length > 0 && !selectedAirlines.includes(flight.segments[0].airlineCode)) return false;
         if (requireCheckedBag && flight.fareTiers[0].checkinBagKg <= 0) return false;
-
-        // Departure time filter
         if (selectedTimeWindows.length > 0) {
-          const depHour = new Date(flight.segments[0].departureISO).getUTCHours();
-          const matchesWindow = selectedTimeWindows.some((w) => {
-            if (w === 'early') return depHour < 6;
-            if (w === 'morning') return depHour >= 6 && depHour < 12;
-            if (w === 'afternoon') return depHour >= 12 && depHour < 18;
-            if (w === 'evening') return depHour >= 18;
-            return false;
-          });
-          if (!matchesWindow) return false;
+          // Same wall-clock basis as the times displayed on the cards
+          const h = new Date(flight.segments[0].departureISO).getUTCHours();
+          const ok = selectedTimeWindows.some((w) =>
+            w === 'early' ? h < 6 : w === 'morning' ? h >= 6 && h < 12 : w === 'afternoon' ? h >= 12 && h < 18 : h >= 18
+          );
+          if (!ok) return false;
         }
-
         return true;
       })
       .sort((a, b) => {
-        const priceA = a.fareTiers[0].priceInr + a.fareTiers[0].taxesInr;
-        const priceB = b.fareTiers[0].priceInr + b.fareTiers[0].taxesInr;
-
-        if (sortOption === 'cheapest') return priceA - priceB;
+        if (sortOption === 'cheapest') return lowestTotal(a) - lowestTotal(b);
         if (sortOption === 'fastest') return a.totalDurationMinutes - b.totalDurationMinutes;
-        if (sortOption === 'earliest') {
-          return (
-            new Date(a.segments[0].departureISO).getTime() -
-            new Date(b.segments[0].departureISO).getTime()
-          );
-        }
-        // Best: balanced score (stops, duration, price)
-        return priceA + a.totalDurationMinutes * 10 - (priceB + b.totalDurationMinutes * 10);
+        if (sortOption === 'earliest') return a.segments[0].departureISO.localeCompare(b.segments[0].departureISO);
+        // Best: price plus a time cost of ₹10/min and ₹1,500 per stop
+        const score = (f: FlightItinerary) => lowestTotal(f) + f.totalDurationMinutes * 10 + f.stops * 1500;
+        return score(a) - score(b);
       });
-  }, [maxPriceInr, selectedStops, selectedAirlines, requireCheckedBag, selectedTimeWindows, sortOption]);
+  }, [showSavedOnly, savedIds, maxPriceInr, selectedStops, selectedAirlines, requireCheckedBag, selectedTimeWindows, sortOption]);
 
-  const handleResetFilters = () => {
-    setMaxPriceInr(20000);
+  // Computed across every itinerary so the badge stays truthful when filters hide some
+  const { cheapestId, fastestId } = useMemo(() => {
+    const byPrice = [...mockItineraries].sort((a, b) => lowestTotal(a) - lowestTotal(b));
+    const byTime = [...mockItineraries].sort((a, b) => a.totalDurationMinutes - b.totalDurationMinutes);
+    return { cheapestId: byPrice[0]?.id, fastestId: byTime[0]?.id };
+  }, []);
+
+  const activeFilterCount =
+    (maxPriceInr < PRICE_MAX_INR ? 1 : 0) +
+    selectedStops.length +
+    selectedTimeWindows.length +
+    selectedAirlines.length +
+    (requireCheckedBag ? 1 : 0);
+
+  useReveal([filteredFlights, isSearching, isFareStripLoading]);
+
+  const scrollToResults = () => {
+    resultsRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+  };
+
+  const handleSelectDay = (dateISO: string) => {
+    if (dateISO === selectedDayISO && !isFareStripLoading) return;
+    setSelectedDayISO(dateISO);
+    setDepartureDate(dateISO);
+    setIsFareStripLoading(true);
+    later(() => setIsFareStripLoading(false), 450);
+  };
+
+  const handleSearch = () => {
+    if (isSearching) return;
+    setIsSearching(true);
+    setShowSavedOnly(false);
+    if (mockDayFares.some((d) => d.dateISO === departureDate)) setSelectedDayISO(departureDate);
+    later(() => {
+      setSearchedRoute({ origin: origin.code, destination: destination.code });
+      setIsSearching(false);
+      scrollToResults();
+    }, 900);
+  };
+
+  const handleResetFilters = useCallback(() => {
+    setMaxPriceInr(PRICE_MAX_INR);
     setSelectedStops([]);
     setSelectedTimeWindows([]);
     setSelectedAirlines([]);
-    setRequireCheckedBagChange(false);
+    setRequireCheckedBag(false);
     setSortOption('best');
-  };
+    setShowSavedOnly(false);
+  }, []);
 
   const handleEditSearch = () => {
-    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
-    setTimeout(() => {
-      originInputRef.current?.focus();
-    }, 350);
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+    later(() => originTriggerRef.current?.focus({ preventScroll: true }), prefersReducedMotion() ? 0 : 450);
   };
 
-  const handleOpenSeatMap = (flight: FlightItinerary, tier: FareTier) => {
-    setSelectedFlightForSeat(flight);
-    setSelectedTierForSeat(tier);
-  };
+  const toggleSave = (id: string) =>
+    setSavedIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
   const handleConfirmSeat = (seatId: string, grandTotalInr: number) => {
-    if (!selectedFlightForSeat) return;
-    const ref = `FF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    const flightNum = selectedFlightForSeat.segments[0].flightNumber;
-    const route = `${selectedFlightForSeat.segments[0].origin.code} → ${selectedFlightForSeat.segments[0].destination.code}`;
-
-    setSelectedFlightForSeat(null);
-    setSelectedTierForSeat(null);
-
+    if (!seatSelection) return;
+    const seg = seatSelection.flight.segments[0];
+    const last = seatSelection.flight.segments[seatSelection.flight.segments.length - 1];
+    setSeatSelection(null);
     setBookingToast({
       isOpen: true,
-      bookingRef: ref,
-      flightNumber: flightNum,
-      route,
+      bookingRef: `FF-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+      flightNumber: seg.flightNumber,
+      route: `${seg.origin.code} → ${last.destination.code}`,
       seatId,
       totalInr: grandTotalInr,
     });
   };
 
-  // Parallax transform calculation
-  const heroParallaxStyle = prefersReducedMotion
-    ? {}
-    : {
-        transform: `translate3d(0, ${Math.min(scrollY * 0.15, 48)}px, 0)`,
-        opacity: Math.max(1 - scrollY / 320, 0.15),
-      };
+  const closeToast = useCallback(() => setBookingToast((t) => ({ ...t, isOpen: false })), []);
+  const closeSheet = useCallback(() => setIsMobileSheetOpen(false), []);
+
+  const travellers = passengers.adults + passengers.children + passengers.infants;
+  const isSampleRoute =
+    searchedRoute.origin === SAMPLE_ROUTE.origin && searchedRoute.destination === SAMPLE_ROUTE.destination;
+  const compareHref = `/search?origin=${origin.code}&destination=${destination.code}&departure_date=${departureDate}&adults=${passengers.adults}`;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] relative selection:bg-blue-100 selection:text-blue-900">
-      {/* 1. Top GPU-composited Scroll Progress Bar */}
-      <div
-        className="fixed top-0 left-0 right-0 h-[2px] bg-[var(--accent-primary)] z-[var(--z-toast)] pointer-events-none origin-left"
-        style={{
-          transform: `scaleX(${scrollProgress})`,
-          transition: prefersReducedMotion ? 'none' : 'transform 60ms linear',
-        }}
-        aria-hidden="true"
-      />
+    <div className="relative min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)]">
+      <ScrollProgress />
 
-      {/* 2. Top Navigation (64px) */}
-      <Navigation
+      <Navbar
         currency={currency}
         onCurrencyChange={setCurrency}
-        savedCount={savedCount}
+        savedCount={savedIds.length}
+        showSavedOnly={showSavedOnly}
+        onToggleSaved={() => {
+          setShowSavedOnly((v) => !v);
+          scrollToResults();
+        }}
       />
 
-      {/* 3. Sticky Compressed Search Header */}
       <StickyHeader
         isVisible={isStickyVisible}
         origin={origin}
         destination={destination}
         departureDate={departureDate}
-        adultsCount={passengers.adults}
+        returnDate={tripType === 'round-trip' ? returnDate : undefined}
+        travellers={travellers}
         cabinClass={cabinClass}
         onEdit={handleEditSearch}
       />
 
-      {/* 4. Hero & Unified Search Section */}
-      <section style={heroParallaxStyle} className="transition-opacity">
+      <section className="relative">
+        <div className="hero-backdrop" aria-hidden="true" />
         <HeroSearch
           tripType={tripType}
           onTripTypeChange={setTripType}
@@ -255,13 +292,13 @@ export default function FlightBookingApp() {
           onPassengersChange={setPassengers}
           cabinClass={cabinClass}
           onCabinClassChange={setCabinClass}
-          onSearch={() => handleSelectDay(departureDate)}
+          onSearch={handleSearch}
+          isSearching={isSearching}
           sentinelRef={sentinelRef}
-          originInputRef={originInputRef}
+          originTriggerRef={originTriggerRef}
         />
       </section>
 
-      {/* 5. 7-Day Flexible Fare Strip */}
       <FlexibleFareStrip
         dayFares={mockDayFares}
         selectedDate={selectedDayISO}
@@ -270,10 +307,8 @@ export default function FlightBookingApp() {
         isLoading={isFareStripLoading}
       />
 
-      {/* 6. Results Layout with Filter Sidebar */}
-      <main className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* Desktop Filter Sidebar & Mobile Trigger */}
+      <main id="main" className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-start gap-8 lg:flex-row">
           <FilterSidebar
             sortOption={sortOption}
             onSortOptionChange={setSortOption}
@@ -285,87 +320,133 @@ export default function FlightBookingApp() {
             onTimeWindowsChange={setSelectedTimeWindows}
             selectedAirlines={selectedAirlines}
             onAirlinesChange={setSelectedAirlines}
+            airlines={airlineOptions}
             requireCheckedBag={requireCheckedBag}
-            onRequireCheckedBagChange={setRequireCheckedBagChange}
+            onRequireCheckedBagChange={setRequireCheckedBag}
             currency={currency}
             onResetAll={handleResetFilters}
+            activeFilterCount={activeFilterCount}
+            resultCount={filteredFlights.length}
             isMobileSheetOpen={isMobileSheetOpen}
-            onCloseMobileSheet={() => setIsMobileSheetOpen(false)}
+            onCloseMobileSheet={closeSheet}
           />
 
-          {/* Results List */}
-          <div className="flex-1 w-full space-y-4">
-            {/* Results Header with Count & Mobile Filter Trigger */}
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-hairline)] text-xs text-[var(--text-secondary)]">
-              <span className="font-semibold">
-                Showing {filteredFlights.length} verified flights
-              </span>
-
-              {/* Mobile Filter Sheet Trigger */}
-              <button
-                type="button"
-                onClick={() => setIsMobileSheetOpen(true)}
-                className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--border-hairline)] bg-white text-xs font-semibold text-[var(--text-primary)] shadow-sm touch-target"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>Filters</span>
-              </button>
-            </div>
-
-            {/* Flight Cards / Empty State */}
-            {filteredFlights.length === 0 ? (
-              <div className="bg-white rounded-[var(--radius-card)] border border-[var(--border-hairline)] p-12 text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-[var(--bg-subtle)] flex items-center justify-center mx-auto text-[var(--text-muted)] text-xl">
-                  ✈
-                </div>
-                <h3 className="text-base font-semibold text-[var(--text-primary)]">
-                  No flights match these filters
-                </h3>
-                <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto">
-                  Try broadening your departure time, raising the budget limit, or clearing airline filters.
+          <div ref={resultsRef} className="w-full min-w-0 flex-1 scroll-mt-[calc(var(--header-h)+64px)]">
+            {/* Results header */}
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold tracking-[-0.02em] text-[var(--text-primary)]">
+                  {showSavedOnly ? 'Saved flights' : `${searchedRoute.origin} → ${searchedRoute.destination}`}
+                </h2>
+                <p className="text-xs text-[var(--text-muted)]" aria-live="polite">
+                  {isSearching
+                    ? 'Querying sellers…'
+                    : `${filteredFlights.length} of ${mockItineraries.length} flights${
+                        activeFilterCount ? ` · ${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''} on` : ''
+                      } · prices per adult incl. taxes`}
                 </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link href={compareHref} className="btn btn-ghost hidden h-9 px-3 text-xs sm:inline-flex">
+                  Compare sellers
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </Link>
                 <button
                   type="button"
-                  onClick={handleResetFilters}
-                  className="px-5 py-2 rounded-full bg-[var(--text-primary)] text-white text-xs font-semibold hover:bg-[var(--accent-primary)] transition-colors touch-target"
+                  onClick={() => setIsMobileSheetOpen(true)}
+                  className="btn btn-secondary h-9 px-3 text-xs lg:hidden"
                 >
-                  Reset all filters
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="rounded-full bg-[var(--accent-primary)] px-1.5 text-[10px] font-semibold text-white tabular-nums">
+                      {activeFilterCount}
+                    </span>
+                  )}
                 </button>
               </div>
-            ) : (
-              filteredFlights.map((flight, idx) => (
-                <FlightCard
-                  key={flight.id}
-                  flight={flight}
-                  currency={currency}
-                  onSelectFare={handleOpenSeatMap}
-                  index={idx}
-                />
-              ))
+            </div>
+
+            {!isSampleRoute && !isSearching && !showSavedOnly && (
+              <div
+                role="note"
+                className="mb-4 flex animate-fade-up items-start gap-3 rounded-[var(--radius-control)] border border-[var(--border-hairline)] bg-[var(--bg-surface)] px-4 py-3 text-sm text-[var(--text-secondary)]"
+              >
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
+                <p>
+                  Live fares for <strong className="font-semibold text-[var(--text-primary)]">{searchedRoute.origin} → {searchedRoute.destination}</strong>{' '}
+                  aren’t connected in this demo yet. Showing sample fares for Delhi → Mumbai so you can explore the experience.
+                </p>
+              </div>
             )}
+
+            <div className="space-y-3">
+              {isSearching ? (
+                <>
+                  <ResultSkeleton />
+                  <ResultSkeleton />
+                  <ResultSkeleton />
+                </>
+              ) : filteredFlights.length === 0 ? (
+                <div className="animate-fade-up rounded-[var(--radius-card)] border border-dashed border-[var(--border-strong)] bg-[var(--bg-surface)] px-6 py-14 text-center">
+                  <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-[var(--bg-subtle)] text-[var(--text-muted)]">
+                    {showSavedOnly ? <Bookmark className="h-5 w-5" /> : <SlidersHorizontal className="h-5 w-5" />}
+                  </div>
+                  <h3 className="text-base font-semibold text-[var(--text-primary)]">
+                    {showSavedOnly ? 'No saved flights yet' : 'No flights match these filters'}
+                  </h3>
+                  <p className="mx-auto mt-1.5 max-w-sm text-sm text-[var(--text-secondary)]">
+                    {showSavedOnly
+                      ? 'Tap the bookmark on any flight to keep it here while you compare.'
+                      : 'Try a wider departure window, a higher budget or fewer airline filters.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={showSavedOnly ? () => setShowSavedOnly(false) : handleResetFilters}
+                    className="btn btn-primary mt-5 h-10 px-5 text-sm"
+                  >
+                    {showSavedOnly ? 'Show all flights' : 'Reset filters'}
+                  </button>
+                </div>
+              ) : (
+                filteredFlights.map((flight, idx) => (
+                  <FlightCard
+                    key={flight.id}
+                    flight={flight}
+                    currency={currency}
+                    index={idx}
+                    isSaved={savedIds.includes(flight.id)}
+                    highlights={[
+                      ...(flight.id === cheapestId ? (['cheapest'] as const) : []),
+                      ...(flight.id === fastestId ? (['fastest'] as const) : []),
+                    ]}
+                    onToggleSave={toggleSave}
+                    onSelectFare={(f, tier) => setSeatSelection({ flight: f, tier })}
+                  />
+                ))
+              )}
+            </div>
           </div>
         </div>
       </main>
 
-      {/* 7. Cabin Seat Map Dialog / Bottom Sheet */}
-      {selectedFlightForSeat && selectedTierForSeat && (
+      <Footer />
+
+      {seatSelection && (
         <SeatMapModal
-          isOpen={true}
-          onClose={() => {
-            setSelectedFlightForSeat(null);
-            setSelectedTierForSeat(null);
-          }}
-          flight={selectedFlightForSeat}
-          tier={selectedTierForSeat}
+          key={`${seatSelection.flight.id}-${seatSelection.tier.id}`}
+          isOpen
+          onClose={() => setSeatSelection(null)}
+          flight={seatSelection.flight}
+          tier={seatSelection.tier}
           currency={currency}
           onConfirmSeat={handleConfirmSeat}
         />
       )}
 
-      {/* 8. Booking Confirmation Toast */}
       <BookingToast
         isOpen={bookingToast.isOpen}
-        onClose={() => setBookingToast({ ...bookingToast, isOpen: false })}
+        onClose={closeToast}
         bookingRef={bookingToast.bookingRef}
         flightNumber={bookingToast.flightNumber}
         route={bookingToast.route}

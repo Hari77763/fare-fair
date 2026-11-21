@@ -4,13 +4,13 @@ import { Footer } from "@/components/footer";
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-[var(--bg-canvas)] flex flex-col">
       <Navbar />
-      <main className="max-w-4xl mx-auto px-4 sm:px-8 py-16 flex-1 w-full">
-        <h1 className="text-3xl font-extrabold text-navy mb-4">Privacy Policy</h1>
+      <main id="main" className="max-w-4xl mx-auto px-4 sm:px-8 py-16 flex-1 w-full">
+        <h1 className="text-3xl font-semibold tracking-tight text-navy mb-4">Privacy Policy</h1>
         <p className="text-xs text-slate-400 mb-8">Last Updated: November 2026</p>
 
-        <div className="bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 shadow-sm space-y-6 text-sm text-slate-700 leading-relaxed">
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-8 sm:p-12 shadow-sm space-y-6 text-sm text-slate-700 leading-relaxed">
           <p>
             FareFair (&ldquo;we&rdquo;, &ldquo;our&rdquo;) is an independent flight metasearch platform. We prioritize consumer privacy and do not collect or sell personal travel data for advertising purposes.
           </p>
