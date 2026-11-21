@@ -5,42 +5,62 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 210 40% 98%;
-    --foreground: 222.2 84% 4.9%;
-  }
-
   * {
-    box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
   }
 
   html {
     scroll-behavior: smooth;
+    /* Anchor jumps land below the sticky header */
+    scroll-padding-top: calc(var(--header-h) + 16px);
     background-color: var(--bg-canvas);
     color: var(--text-primary);
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    accent-color: var(--accent-primary);
   }
 
   body {
-    background-color: var(--bg-canvas);
+    min-height: 100vh;
+    /* Transparent so the fixed ambient light field shows through */
+    background-color: transparent;
     color: var(--text-primary);
-    overflow-x: hidden;
-    margin: 0;
-    padding: 0;
+    overflow-x: clip;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Custom range thumb */
-  input[type="range"]::-webkit-slider-thumb {
-    appearance: none;
-    height: 18px;
-    width: 18px;
-    border-radius: 50%;
-    background: var(--accent-primary);
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: rgba(29, 78, 216, 0.14);
+    color: var(--text-primary);
+  }
+
+  /* One consistent, visible focus ring for keyboard users only */
+  :focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    opacity: 0.55;
+    transition: opacity 140ms ease;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
   }
 }

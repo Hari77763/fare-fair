@@ -1,12 +1,14 @@
-# FareFair Backend Python Dependencies
+# FairFare Backend Python Dependencies
 fastapi>=0.110.0
 uvicorn[standard]>=0.28.0
 pydantic>=2.6.0
 pydantic-settings>=2.2.0
-sqlalchemy>=2.0.28
+sqlalchemy[asyncio]>=2.0.28
 asyncpg>=0.29.0
 pyjwt>=2.8.0
-passlib[bcrypt]>=1.7.4
+passlib>=1.7.4
+# passlib 1.7.4 is incompatible with bcrypt>=4.1 (raises on its 72-byte self-test)
+bcrypt>=4.0.1,<4.1
 python-multipart>=0.0.9
 httpx>=0.27.0
 redis>=5.0.2

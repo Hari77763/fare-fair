@@ -38,12 +38,29 @@ export function formatDuration(minutes: number): string {
  * @returns Formatted time like "14:30"
  */
 export function formatTime(isoTime: string): string {
+  // Wall-clock "HH:MM" values (local airport time) are shown as-is; parsing
+  // them with Date() yields "Invalid Date".
+  const hhmm = /^(\d{1,2}):(\d{2})/.exec(isoTime);
+  if (hhmm && !isoTime.includes("T")) {
+    return `${hhmm[1].padStart(2, "0")}:${hhmm[2]}`;
+  }
   const date = new Date(isoTime);
+  if (Number.isNaN(date.getTime())) return "--:--";
+  // Fixed zone so server and browser render identical text (no hydration drift).
   return date.toLocaleTimeString("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone: "Asia/Kolkata",
   });
+}
+
+/** Minutes since midnight for an "HH:MM" or ISO string, or null if unparseable. */
+function minutesOfDay(value: string): number | null {
+  const hhmm = /^(\d{1,2}):(\d{2})$/.exec(value);
+  if (hhmm) return Number(hhmm[1]) * 60 + Number(hhmm[2]);
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.getUTCHours() * 60 + d.getUTCMinutes();
 }
 
 /**
@@ -51,22 +68,31 @@ export function formatTime(isoTime: string): string {
  * @param isoDate - ISO 8601 date string
  * @returns Formatted date like "Mon, 25 Dec"
  */
-export function formatDate(isoDate: string): string {
+export function formatDate(isoDate: string, options?: Intl.DateTimeFormatOptions): string {
+  // "YYYY-MM-DD" parses as UTC midnight; formatting in UTC keeps the calendar
+  // day stable for users west of Greenwich and between server and client.
   const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return isoDate;
   return date.toLocaleDateString("en-IN", {
     weekday: "short",
     day: "numeric",
     month: "short",
+    timeZone: "UTC",
+    ...options,
   });
 }
 
 /**
  * Checks if arrival is on the next day relative to departure.
+ * Works for both "HH:MM" wall-clock strings and full ISO timestamps.
  */
 export function isNextDay(departure: string, arrival: string): boolean {
-  const dep = new Date(departure);
-  const arr = new Date(arrival);
-  return arr.getDate() !== dep.getDate();
+  if (departure.includes("T") && arrival.includes("T")) {
+    return departure.slice(0, 10) !== arrival.slice(0, 10);
+  }
+  const dep = minutesOfDay(departure);
+  const arr = minutesOfDay(arrival);
+  return dep !== null && arr !== null && arr < dep;
 }
 
 /**

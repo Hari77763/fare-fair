@@ -24,9 +24,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Simulated in-memory user database
-_USERS_DB: dict[str, dict] = {
-    "user@fairfare.in": {
+# Simulated in-memory user database.
+# The demo account exists only outside production so a deployed API never
+# ships with a publicly documented password.
+_USERS_DB: dict[str, dict] = {}
+if settings.ENV != "production":
+    _USERS_DB["user@fairfare.in"] = {
         "id": UUID("00000000-0000-0000-0000-000000000001"),
         "email": "user@fairfare.in",
         "hashed_password": hash_password("demo12345"),
@@ -35,7 +38,14 @@ _USERS_DB: dict[str, dict] = {
         "is_verified": True,
         "created_at": datetime.now(timezone.utc),
     }
-}
+
+
+def get_user_by_id(user_id: str) -> dict | None:
+    """Look up a user record by its UUID string."""
+    for record in _USERS_DB.values():
+        if str(record["id"]) == user_id:
+            return record
+    return None
 
 
 @router.post(
@@ -93,30 +103,20 @@ async def login(
     email_clean = login_data.email.lower().strip()
     user = _USERS_DB.get(email_clean)
 
-    # In simulated environment, accept demo credentials or verify stored hash
-    if not user:
-        if email_clean == "user@fairfare.in" or login_data.password in ("demo12345", "password"):
-            user = {
-                "id": UUID("00000000-0000-0000-0000-000000000001"),
-                "email": "user@fairfare.in",
-                "full_name": "Demo User",
-                "is_active": True,
-                "is_verified": True,
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-    else:
-        # Verify password if user exists in DB
-        if not verify_password(login_data.password, user["hashed_password"]) and login_data.password != "demo12345":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+    # Always verify against the stored hash. There is deliberately no master
+    # password and no fallback account: unknown emails and wrong passwords get
+    # the same generic 401 so the endpoint does not reveal which emails exist.
+    if not user or not verify_password(login_data.password, user["hashed_password"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not user.get("is_active", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user account",
+        )
 
     user_id_str = str(user["id"])
     access_token = create_access_token(subject=user_id_str)
@@ -147,6 +147,8 @@ async def refresh_token(
         subject = token_payload.sub
         if not subject:
             raise ValueError("Token subject is missing")
+        if get_user_by_id(subject) is None:
+            raise ValueError("Token subject no longer exists")
     except ValueError as exc:
         logger.warning("Refresh token validation failed: %s", exc)
         raise HTTPException(

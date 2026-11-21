@@ -5,9 +5,9 @@ with IATA codes, city names, and timezones.
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 logger = logging.getLogger(__name__)
 
@@ -103,10 +103,14 @@ POPULAR_AIRPORT_CODES = ["DEL", "BOM", "BLR", "HYD", "MAA", "CCU", "GOI", "COK",
     description="Search 60+ airports by IATA code or city name. Case-insensitive, returns up to 10 matches.",
 )
 async def search_airports(
-    q: str = Query(..., min_length=1, description="Search query (IATA code, city name, or airport name)"),
+    q: Optional[str] = Query(None, max_length=64, description="Search query (IATA code, city name, or airport name)"),
+    query_param: Optional[str] = Query(None, alias="query", max_length=64, description="Alias of `q` (documented form)"),
 ) -> List[Dict[str, Any]]:
     """Filter airports by query string matching code or city."""
-    query = q.strip().lower()
+    raw = (q or query_param or "").strip()
+    if not raw:
+        raise HTTPException(status_code=422, detail="Provide a search term via `q` or `query`")
+    query = raw.lower()
     matches: List[Dict[str, Any]] = []
 
     # Priority 1: Exact code match

@@ -1,344 +1,400 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
-import { SortOption, TimeWindow, CurrencyCode } from '../types/flight';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { RotateCcw, X } from 'lucide-react';
+import type { SortOption, TimeWindow, CurrencyCode } from '../types/flight';
 import { convertPrice } from '../data/mockFlights';
-import { SlidersHorizontal, RotateCcw, X, Luggage } from 'lucide-react';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+
+export const PRICE_MIN_INR = 4000;
+export const PRICE_MAX_INR = 20000;
 
 interface FilterSidebarProps {
   sortOption: SortOption;
   onSortOptionChange: (opt: SortOption) => void;
   maxPriceInr: number;
   onMaxPriceInrChange: (val: number) => void;
-  selectedStops: number[]; // e.g. [0] for non-stop
+  selectedStops: number[];
   onStopsChange: (stops: number[]) => void;
   selectedTimeWindows: TimeWindow[];
   onTimeWindowsChange: (windows: TimeWindow[]) => void;
   selectedAirlines: string[];
   onAirlinesChange: (airlines: string[]) => void;
+  airlines: { code: string; name: string; lowestInr: number }[];
   requireCheckedBag: boolean;
   onRequireCheckedBagChange: (req: boolean) => void;
   currency: CurrencyCode;
   onResetAll: () => void;
-  isMobileSheetOpen?: boolean;
-  onCloseMobileSheet?: () => void;
+  activeFilterCount: number;
+  resultCount: number;
+  isMobileSheetOpen: boolean;
+  onCloseMobileSheet: () => void;
 }
 
-export function FilterSidebar({
-  sortOption,
-  onSortOptionChange,
-  maxPriceInr,
-  onMaxPriceInrChange,
-  selectedStops,
-  onStopsChange,
-  selectedTimeWindows,
-  onTimeWindowsChange,
-  selectedAirlines,
-  onAirlinesChange,
-  requireCheckedBag,
-  onRequireCheckedBagChange,
-  currency,
-  onResetAll,
-  isMobileSheetOpen,
-  onCloseMobileSheet,
-}: FilterSidebarProps) {
-  // Mobile physics bottom-sheet drag gesture
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const [dragY, setDragY] = useState(0);
-  const startYRef = useRef(0);
-  const startTimeRef = useRef(0);
+const SORTS: { id: SortOption; label: string }[] = [
+  { id: 'best', label: 'Best' },
+  { id: 'cheapest', label: 'Cheapest' },
+  { id: 'fastest', label: 'Fastest' },
+  { id: 'earliest', label: 'Earliest' },
+];
 
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (e.pointerType === 'mouse') return;
-    startYRef.current = e.clientY;
-    startTimeRef.current = performance.now();
-  };
+const TIME_WINDOWS: { id: TimeWindow; label: string; range: string }[] = [
+  { id: 'early', label: 'Early', range: '00–06' },
+  { id: 'morning', label: 'Morning', range: '06–12' },
+  { id: 'afternoon', label: 'Afternoon', range: '12–18' },
+  { id: 'evening', label: 'Evening', range: '18–24' },
+];
 
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!startYRef.current) return;
-    const dy = e.clientY - startYRef.current;
-    if (dy > 0) {
-      setDragY(dy);
-    } else {
-      // Rubber band upward resistance
-      setDragY(dy * 0.2);
-    }
-  };
+function toggle<T>(list: T[], item: T) {
+  return list.includes(item) ? list.filter((x) => x !== item) : [...list, item];
+}
 
-  const onPointerUp = (e: React.PointerEvent) => {
-    if (!startYRef.current) return;
-    const dy = e.clientY - startYRef.current;
-    const dt = performance.now() - startTimeRef.current;
-    const vy = dy / dt; // velocity in px/ms
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">{children}</h3>
+  );
+}
 
-    if ((dy > 120 || vy > 0.5) && onCloseMobileSheet) {
-      onCloseMobileSheet();
-    }
-    setDragY(0);
-    startYRef.current = 0;
-  };
+function Chip({
+  selected,
+  onClick,
+  children,
+  className = '',
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={`whitespace-nowrap rounded-[10px] border px-2 py-2 text-xs font-medium transition-[border-color,background-color,color,transform] duration-200 active:scale-[0.97] ${
+        selected
+          ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)] text-[var(--accent-primary)]'
+          : 'border-[var(--border-hairline)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]'
+      } ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
 
-  const airlinesMeta = [
-    { code: '6E', name: 'IndiGo', lowestInr: 4190 },
-    { code: 'AI', name: 'Air India', lowestInr: 4890 },
-    { code: 'QP', name: 'Akasa Air', lowestInr: 4620 },
-    { code: 'UK', name: 'Vistara', lowestInr: 5200 },
-    { code: 'SG', name: 'SpiceJet', lowestInr: 4580 },
-  ];
+export function FilterSidebar(props: FilterSidebarProps) {
+  const {
+    sortOption,
+    onSortOptionChange,
+    maxPriceInr,
+    onMaxPriceInrChange,
+    selectedStops,
+    onStopsChange,
+    selectedTimeWindows,
+    onTimeWindowsChange,
+    selectedAirlines,
+    onAirlinesChange,
+    airlines,
+    requireCheckedBag,
+    onRequireCheckedBagChange,
+    currency,
+    onResetAll,
+    activeFilterCount,
+    resultCount,
+    isMobileSheetOpen,
+    onCloseMobileSheet,
+  } = props;
 
-  const timeWindowsMeta: { id: TimeWindow; label: string; desc: string }[] = [
-    { id: 'early', label: 'Before 6 AM', desc: '00:00 – 06:00' },
-    { id: 'morning', label: '6 AM – 12 PM', desc: '06:00 – 12:00' },
-    { id: 'afternoon', label: '12 PM – 6 PM', desc: '12:00 – 18:00' },
-    { id: 'evening', label: 'After 6 PM', desc: '18:00 – 24:00' },
-  ];
-
-  const toggleStop = (stop: number) => {
-    if (selectedStops.includes(stop)) {
-      onStopsChange(selectedStops.filter((s) => s !== stop));
-    } else {
-      onStopsChange([...selectedStops, stop]);
-    }
-  };
-
-  const toggleTimeWindow = (w: TimeWindow) => {
-    if (selectedTimeWindows.includes(w)) {
-      onTimeWindowsChange(selectedTimeWindows.filter((tw) => tw !== w));
-    } else {
-      onTimeWindowsChange([...selectedTimeWindows, w]);
-    }
-  };
-
-  const toggleAirline = (code: string) => {
-    if (selectedAirlines.includes(code)) {
-      onAirlinesChange(selectedAirlines.filter((a) => a !== code));
-    } else {
-      onAirlinesChange([...selectedAirlines, code]);
-    }
-  };
+  const fill = ((maxPriceInr - PRICE_MIN_INR) / (PRICE_MAX_INR - PRICE_MIN_INR)) * 100;
 
   const content = (
-    <div className="space-y-6 text-xs text-[var(--text-secondary)]">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-[var(--border-hairline)]">
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-          <span className="font-semibold uppercase tracking-wider text-[var(--text-primary)]">
-            Filters
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={onResetAll}
-          className="flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--accent-primary)] transition-colors touch-target"
-        >
-          <RotateCcw className="w-3 h-3" />
-          <span>Reset</span>
-        </button>
-      </div>
-
-      {/* Sort Tabs with animated active underline */}
-      <div>
-        <span className="block font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-          Sort By
-        </span>
-        <div className="grid grid-cols-2 gap-1.5 p-1 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-hairline)]">
-          {(['best', 'cheapest', 'fastest', 'earliest'] as SortOption[]).map((opt) => (
+    <div className="space-y-6">
+      <section>
+        <SectionTitle>Sort by</SectionTitle>
+        <div role="radiogroup" aria-label="Sort results" className="grid grid-cols-2 gap-1.5">
+          {SORTS.map((s) => (
             <button
-              key={opt}
+              key={s.id}
               type="button"
-              onClick={() => onSortOptionChange(opt)}
-              className={`py-1.5 px-2 rounded-lg text-xs font-semibold capitalize transition-all touch-target ${
-                sortOption === opt
-                  ? 'bg-white text-[var(--accent-primary)] shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              role="radio"
+              aria-checked={sortOption === s.id}
+              onClick={() => onSortOptionChange(s.id)}
+              className={`rounded-[10px] px-2.5 py-2 text-xs font-semibold transition-[background-color,color,box-shadow] duration-200 ${
+                sortOption === s.id
+                  ? 'bg-[var(--text-primary)] text-white shadow-[0_1px_2px_rgba(11,18,32,0.2)]'
+                  : 'bg-[var(--bg-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              {opt}
+              {s.label}
             </button>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Price Range Slider */}
-      <div>
-        <div className="flex justify-between items-center mb-1.5">
-          <span className="font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-            Max Price
-          </span>
-          <span className="font-semibold text-[var(--text-primary)] tabular-nums">
-            {convertPrice(maxPriceInr, currency)}
+      <section>
+        <div className="mb-2.5 flex items-baseline justify-between">
+          <SectionTitle>Max price</SectionTitle>
+          <span className="text-sm font-semibold text-[var(--text-primary)] tabular-nums">
+            {maxPriceInr >= PRICE_MAX_INR ? 'Any' : convertPrice(maxPriceInr, currency)}
           </span>
         </div>
         <input
           type="range"
-          min="4000"
-          max="20000"
-          step="500"
+          aria-label="Maximum price"
+          aria-valuetext={convertPrice(maxPriceInr, currency)}
+          min={PRICE_MIN_INR}
+          max={PRICE_MAX_INR}
+          step={250}
           value={maxPriceInr}
           onChange={(e) => onMaxPriceInrChange(Number(e.target.value))}
-          className="w-full h-1.5 bg-[var(--bg-subtle)] rounded-lg appearance-none cursor-pointer"
+          className="range"
+          style={{ ['--fill' as string]: `${fill}%` }}
         />
-        <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-1 tabular-nums">
-          <span>{convertPrice(4000, currency)}</span>
-          <span>{convertPrice(20000, currency)}</span>
+        <div className="mt-1.5 flex justify-between text-[11px] text-[var(--text-muted)] tabular-nums">
+          <span>{convertPrice(PRICE_MIN_INR, currency)}</span>
+          <span>{convertPrice(PRICE_MAX_INR, currency)}+</span>
         </div>
-      </div>
+      </section>
 
-      {/* Stops Segmented Control */}
-      <div>
-        <span className="block font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-          Stops
-        </span>
+      <section>
+        <SectionTitle>Stops</SectionTitle>
         <div className="grid grid-cols-3 gap-1.5">
-          {[
-            { label: 'Any', value: -1 },
-            { label: 'Non-stop', value: 0 },
-            { label: '1 Stop', value: 1 },
-          ].map((item) => {
-            const isSelected =
-              item.value === -1 ? selectedStops.length === 0 : selectedStops.includes(item.value);
+          <Chip selected={selectedStops.length === 0} onClick={() => onStopsChange([])}>
+            Any
+          </Chip>
+          <Chip selected={selectedStops.includes(0)} onClick={() => onStopsChange(toggle(selectedStops, 0))}>
+            Non-stop
+          </Chip>
+          <Chip selected={selectedStops.includes(1)} onClick={() => onStopsChange(toggle(selectedStops, 1))}>
+            1 stop
+          </Chip>
+        </div>
+      </section>
+
+      <section>
+        <SectionTitle>Departure time</SectionTitle>
+        <div className="grid grid-cols-2 gap-1.5">
+          {TIME_WINDOWS.map((tw) => (
+            <Chip
+              key={tw.id}
+              selected={selectedTimeWindows.includes(tw.id)}
+              onClick={() => onTimeWindowsChange(toggle(selectedTimeWindows, tw.id))}
+              className="text-left"
+            >
+              <span className="block">{tw.label}</span>
+              <span className="block text-[10px] font-normal opacity-70 tabular-nums">{tw.range}</span>
+            </Chip>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <SectionTitle>Airlines</SectionTitle>
+        <ul className="-mx-2 space-y-0.5">
+          {airlines.map((a) => {
+            const checked = selectedAirlines.includes(a.code);
             return (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => {
-                  if (item.value === -1) {
-                    onStopsChange([]);
-                  } else {
-                    toggleStop(item.value);
-                  }
-                }}
-                className={`py-2 px-1 text-center rounded-xl border text-xs font-semibold transition-all touch-target ${
-                  isSelected
-                    ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)] text-[var(--accent-primary)]'
-                    : 'border-[var(--border-hairline)] bg-white text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
-                }`}
-              >
-                {item.label}
-              </button>
+              <li key={a.code}>
+                <label className="flex cursor-pointer items-center justify-between rounded-[10px] px-2 py-2 transition-colors hover:bg-[var(--bg-subtle)]">
+                  <span className="flex items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => onAirlinesChange(toggle(selectedAirlines, a.code))}
+                      className="h-4 w-4 cursor-pointer rounded"
+                    />
+                    <span className="text-sm text-[var(--text-primary)]">{a.name}</span>
+                  </span>
+                  <span className="text-xs text-[var(--text-muted)] tabular-nums">
+                    from {convertPrice(a.lowestInr, currency)}
+                  </span>
+                </label>
+              </li>
             );
           })}
-        </div>
-      </div>
+        </ul>
+      </section>
 
-      {/* Departure Time 2x2 Grid */}
-      <div>
-        <span className="block font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-          Departure Time
-        </span>
-        <div className="grid grid-cols-2 gap-2">
-          {timeWindowsMeta.map((tw) => {
-            const isSelected = selectedTimeWindows.includes(tw.id);
-            return (
-              <button
-                key={tw.id}
-                type="button"
-                onClick={() => toggleTimeWindow(tw.id)}
-                className={`p-2.5 rounded-xl border text-left transition-all touch-target ${
-                  isSelected
-                    ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)]'
-                    : 'border-[var(--border-hairline)] bg-white hover:border-[var(--border-strong)]'
-                }`}
-              >
-                <div
-                  className={`text-xs font-semibold ${
-                    isSelected ? 'text-[var(--accent-primary)]' : 'text-[var(--text-primary)]'
-                  }`}
-                >
-                  {tw.label}
-                </div>
-                <div className="text-[10px] text-[var(--text-muted)] mt-0.5 tabular-nums">
-                  {tw.desc}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Airlines Checkbox List */}
-      <div>
-        <span className="block font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-          Airlines
-        </span>
-        <div className="space-y-1.5">
-          {airlinesMeta.map((a) => {
-            const isChecked = selectedAirlines.includes(a.code);
-            return (
-              <label
-                key={a.code}
-                className="flex items-center justify-between p-2 rounded-xl hover:bg-[var(--bg-subtle)] cursor-pointer select-none transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleAirline(a.code)}
-                    className="w-4 h-4 rounded border-[var(--border-strong)] text-[var(--accent-primary)] focus:ring-0"
-                  />
-                  <span className="text-xs font-medium text-[var(--text-primary)]">{a.name}</span>
-                </div>
-                <span className="text-[11px] font-semibold text-[var(--text-muted)] tabular-nums">
-                  {convertPrice(a.lowestInr, currency)}
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Baggage Switch */}
-      <div className="pt-2 border-t border-[var(--border-hairline)]">
-        <label className="flex items-center justify-between cursor-pointer select-none">
-          <div className="flex items-center gap-2">
-            <Luggage className="w-4 h-4 text-[var(--text-muted)]" />
-            <span className="text-xs font-medium text-[var(--text-primary)]">
-              Checked bag included
-            </span>
-          </div>
-          <input
-            type="checkbox"
-            checked={requireCheckedBag}
-            onChange={(e) => onRequireCheckedBagChange(e.target.checked)}
-            className="w-4 h-4 rounded border-[var(--border-strong)] text-[var(--accent-primary)]"
+      <section className="border-t border-[var(--border-hairline)] pt-5">
+        <div className="flex items-center justify-between gap-3">
+          <span id="bag-switch-label" className="text-sm text-[var(--text-primary)]">
+            Checked bag included
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={requireCheckedBag}
+            aria-labelledby="bag-switch-label"
+            onClick={() => onRequireCheckedBagChange(!requireCheckedBag)}
+            className="switch"
           />
-        </label>
-      </div>
+        </div>
+      </section>
     </div>
   );
 
-  // Mobile Bottom Sheet Mode
-  if (isMobileSheetOpen) {
-    return (
+  return (
+    <>
+      <aside
+        aria-label="Filters"
+        className="sticky hidden w-72 shrink-0 self-start glass rounded-[var(--radius-card)] p-5 lg:block"
+        style={{ top: 'calc(var(--header-h) + 72px)' }}
+      >
+        <div className="mb-5 flex items-center justify-between border-b border-[var(--border-hairline)] pb-4">
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="ml-2 rounded-full bg-[var(--accent-primary)] px-1.5 py-0.5 text-[10px] font-semibold text-white tabular-nums">
+                {activeFilterCount}
+              </span>
+            )}
+          </h2>
+          <button
+            type="button"
+            onClick={onResetAll}
+            disabled={activeFilterCount === 0 && sortOption === 'best'}
+            className="btn btn-ghost h-7 px-2 text-xs"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Reset
+          </button>
+        </div>
+        {content}
+      </aside>
+
+      <MobileSheet open={isMobileSheetOpen} onClose={onCloseMobileSheet}>
+        {(requestClose) => (
+          <>
+            <div className="flex items-center justify-between px-5 pb-3">
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">Filters</h2>
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={onResetAll} className="btn btn-ghost h-8 px-3 text-xs">
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={requestClose}
+                  aria-label="Close filters"
+                  className="btn btn-secondary h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-4">{content}</div>
+            <div className="border-t border-[var(--border-hairline)] px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <button type="button" onClick={requestClose} className="btn btn-primary h-12 w-full text-sm">
+                Show {resultCount} flight{resultCount === 1 ? '' : 's'}
+              </button>
+            </div>
+          </>
+        )}
+      </MobileSheet>
+    </>
+  );
+}
+
+/**
+ * Bottom sheet with enter/exit animation, Escape to close, scroll lock and a
+ * drag-to-dismiss handle (dragging is limited to the handle so it never
+ * fights with scrolling the sheet's content).
+ */
+function MobileSheet({
+  open,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  children: (requestClose: () => void) => React.ReactNode;
+}) {
+  const [mounted, setMounted] = useState(open);
+  const [closing, setClosing] = useState(false);
+  const [dragY, setDragY] = useState(0);
+  const drag = useRef<{ y: number; t: number } | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      setClosing(false);
+    }
+  }, [open]);
+
+  const requestClose = useCallback(() => {
+    setClosing(true);
+    window.setTimeout(() => {
+      setMounted(false);
+      setClosing(false);
+      setDragY(0);
+      onClose();
+    }, 240);
+  }, [onClose]);
+
+  useBodyScrollLock(mounted);
+
+  useEffect(() => {
+    if (!mounted) return;
+    panelRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && requestClose();
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [mounted, requestClose]);
+
+  if (!mounted) return null;
+
+  return (
+    <div className="fixed inset-0 lg:hidden" style={{ zIndex: 'var(--z-sheet)' }}>
       <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[var(--z-sheet)] flex flex-col justify-end lg:hidden animate-in fade-in"
-        onClick={onCloseMobileSheet}
+        className={`absolute inset-0 bg-[rgba(11,18,32,0.42)] backdrop-blur-[2px] transition-opacity duration-300 ${
+          closing ? 'opacity-0' : 'animate-in fade-in duration-300'
+        }`}
+        onClick={requestClose}
+        aria-hidden="true"
+      />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Filters"
+        tabIndex={-1}
+        className={`absolute inset-x-0 bottom-0 glass glass-strong flex max-h-[88vh] flex-col rounded-t-[28px] shadow-[var(--shadow-sheet)] outline-none ${
+          closing ? '' : 'animate-sheet-up'
+        }`}
+        style={{
+          transform: closing ? 'translate3d(0,100%,0)' : `translate3d(0, ${dragY}px, 0)`,
+          transition: drag.current ? 'none' : 'transform 260ms cubic-bezier(0.16,1,0.3,1)',
+        }}
       >
         <div
-          ref={sheetRef}
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          style={{
-            transform: `translate3d(0, ${Math.max(dragY, 0)}px, 0)`,
-            transition: dragY === 0 ? 'transform 240ms cubic-bezier(0.22, 1, 0.36, 1)' : 'none',
+          className="flex cursor-grab touch-none justify-center pb-3 pt-3 active:cursor-grabbing"
+          onPointerDown={(e) => {
+            drag.current = { y: e.clientY, t: performance.now() };
+            (e.target as HTMLElement).setPointerCapture(e.pointerId);
           }}
-          className="bg-white rounded-[var(--radius-sheet)] max-h-[85vh] overflow-y-auto p-6 shadow-[var(--shadow-sheet)]"
+          onPointerMove={(e) => {
+            if (!drag.current) return;
+            const dy = e.clientY - drag.current.y;
+            setDragY(dy > 0 ? dy : dy * 0.15);
+          }}
+          onPointerUp={(e) => {
+            if (!drag.current) return;
+            const dy = e.clientY - drag.current.y;
+            const velocity = dy / Math.max(performance.now() - drag.current.t, 1);
+            drag.current = null;
+            if (dy > 110 || velocity > 0.6) requestClose();
+            else setDragY(0);
+          }}
+          onPointerCancel={() => {
+            drag.current = null;
+            setDragY(0);
+          }}
+          aria-hidden="true"
         >
-          {/* Centered 36x4 drag handle */}
-          <div className="w-9 h-1 rounded-full bg-[var(--border-strong)] mx-auto mb-5"></div>
-          {content}
+          <span className="h-1 w-10 rounded-full bg-[var(--border-strong)]" />
         </div>
+        {children(requestClose)}
       </div>
-    );
-  }
-
-  // Desktop Sticky Sidebar Mode
-  return (
-    <aside className="hidden lg:block w-72 shrink-0 p-5 rounded-[var(--radius-card)] border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-[var(--shadow-card)] sticky top-20">
-      {content}
-    </aside>
+    </div>
   );
 }

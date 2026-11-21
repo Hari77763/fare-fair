@@ -1,8 +1,8 @@
-# FareFair (India-First Flight Metasearch Engine)
+# FairFare (India-First Flight Metasearch Engine)
 
-FareFair is an independent, multi-supplier flight metasearch platform covering Indian domestic flights and international flights departing from India.
+FairFare is an independent, multi-supplier flight metasearch platform covering Indian domestic flights and international flights departing from India.
 
-Inspired by clean, minimalist travel design, FareFair provides complete fare transparency, zero platform fees, and two independent price rankings: **Absolute Cheapest** and **Cheapest Trusted**.
+Inspired by clean, minimalist travel design, FairFare provides complete fare transparency, zero platform fees, and two independent price rankings: **Absolute Cheapest** and **Cheapest Trusted**.
 
 ---
 
@@ -16,7 +16,7 @@ Inspired by clean, minimalist travel design, FareFair provides complete fare tra
    - **Cheapest Trusted**: Lowest offer from providers scoring $\ge 85\%$ on our independent trust model.
 3. **Transparent Price Breakdown**:
    - Every fare itemizes: Base Fare + Mandatory Airport Taxes (UDF/PSF) + Supplier Convenience Fees.
-   - **0% FareFair markup** guaranteed.
+   - **0% FairFare markup** guaranteed.
 4. **Multi-Supplier Architecture**:
    - Concurrent asynchronous fan-out across GDS (Amadeus/Travelport) and Indian OTAs (MakeMyTrip, Cleartrip, EaseMyTrip, ixigo).
 5. **DGCA 2026 Compliance**:
@@ -29,7 +29,7 @@ Inspired by clean, minimalist travel design, FareFair provides complete fare tra
 ## Project Structure
 
 ```
-farefair/
+fairfare/
 ├── frontend/               # Next.js 14 App Router, Tailwind CSS, Lucide icons
 │   └── src/
 │       ├── app/            # Pages: Home, Search, Flights, Price Alerts, Dashboard, About, How It Works
@@ -57,10 +57,14 @@ farefair/
 
 ```bash
 cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
 python -m uvicorn main:app --reload --port 8000
 ```
 - API Docs: `http://localhost:8000/docs`
 - Health check: `http://localhost:8000/health`
+- Development login (non-production only): `user@fairfare.in` / `demo12345`
+- `JWT_SECRET_KEY` may be left empty in development (a random key is generated per process). It is **required** when `ENV=production`; the API refuses to start without it.
 
 ### 2. Run Frontend (Next.js)
 
@@ -69,7 +73,49 @@ cd frontend
 npm install
 npm run dev
 ```
-Open `http://localhost:3000` in your browser.
+Open `http://localhost:3000` in your browser. The web app currently runs entirely on bundled demo data and does not call the backend.
+
+### 3. Checks
+
+```bash
+cd backend && python -m pytest -q          # API + auth regression tests
+cd frontend && npm test                     # Vitest unit tests
+cd frontend && npm run lint && npm run typecheck && npm run build
+```
+
+---
+
+## Deployment (Vercel)
+
+**Live:** https://fairfare-neon.vercel.app — every push to `main` of [sofiyandev56-spec/fairfare](https://github.com/sofiyandev56-spec/fairfare) deploys automatically.
+
+The deployable web app is the Next.js project in `frontend/`.
+
+- **Root Directory:** `frontend`
+- **Framework preset:** Next.js (auto-detected) — default build (`next build`) and output settings
+- **Environment variables:**
+  - `TRAVELPAYOUTS_TOKEN` (optional, server-only) — turns on live fares. Without it the site shows clearly-labelled demo data.
+  - `TRAVELPAYOUTS_MARKER` (optional) — your Travelpayouts affiliate marker, added to booking links.
+
+### Live fares
+
+Search results and the flexible-date strip come from the Travelpayouts (Aviasales) Data API through two server routes, so the token never reaches the browser:
+
+- `GET /api/fares?origin=DEL&destination=BOM&departure_date=YYYY-MM-DD[&return_date=YYYY-MM-DD]`
+- `GET /api/fares/calendar?origin=DEL&destination=BOM&start=YYYY-MM-DD&days=7`
+
+Prices are the lowest fares travellers found recently (cached, refreshed about every 10 minutes); seats and the final price are confirmed on the seller's site. If the source is unconfigured or unavailable, the UI says so and falls back to demo data.
+
+The FastAPI backend is not deployed to Vercel; it needs PostgreSQL and Redis and is intended for container hosting (see `infrastructure/docker`).
+
+---
+
+## Credits
+
+FairFare is a collaboration:
+
+- **Hari** ([@Hari77763](https://github.com/Hari77763)) — original idea, product concept and first build
+- **Sofiyan** ([@sofiyandev56-spec](https://github.com/sofiyandev56-spec)) — UI/UX redesign, liquid-glass interface, bug fixes, security hardening, tests and deployment
 
 ---
 

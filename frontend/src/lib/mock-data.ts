@@ -1,5 +1,5 @@
 /**
- * FareFair Mock Data
+ * FairFare Mock Data
  * ===================
  * All data in this file is SIMULATED for demonstration purposes.
  * Prices are stored as integer paise (1 INR = 100 paise).
@@ -159,7 +159,6 @@ function makeOffer(
     deepLink: `https://${supplierId}.example.com/book?flight=demo`,
     verificationState: "verified",
     lastVerifiedAt: "2026-11-21T04:00:00Z",
-    trustScore: supplier.trustScore,
     cabinBaggage: "7 kg",
     checkInBaggage: "15 kg",
     refundable: false,
@@ -168,7 +167,15 @@ function makeOffer(
     mealIncluded: false,
     seatSelection: false,
     ...opts,
+    // Supplier catalogue scores are 0–100; offers expose 0–1, which is what the
+    // trust badge and the ≥0.85 "Cheapest Trusted" threshold expect. Applied
+    // after opts so per-offer overrides are normalised too.
+    trustScore: normaliseTrust(opts.trustScore ?? supplier.trustScore),
   };
+}
+
+function normaliseTrust(score: number): number {
+  return score > 1 ? score / 100 : score;
 }
 
 export const mockFlightResults: FlightResult[] = [

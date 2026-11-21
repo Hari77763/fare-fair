@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { DayFare, CurrencyCode } from '../types/flight';
+import type { DayFare, CurrencyCode } from '../types/flight';
 import { convertPrice } from '../data/mockFlights';
 
 interface FlexibleFareStripProps {
@@ -10,6 +10,10 @@ interface FlexibleFareStripProps {
   onSelectDate: (dateISO: string) => void;
   currency: CurrencyCode;
   isLoading: boolean;
+  /** Shimmer every day (e.g. while a live calendar loads) */
+  isLoadingAll?: boolean;
+  /** Small source label shown beside the heading, e.g. "Live · Aviasales" */
+  sourceLabel?: string;
 }
 
 export function FlexibleFareStrip({
@@ -18,57 +22,78 @@ export function FlexibleFareStrip({
   onSelectDate,
   currency,
   isLoading,
+  isLoadingAll = false,
+  sourceLabel,
 }: FlexibleFareStripProps) {
+  const month = new Date(`${dayFares[0]?.dateISO}T00:00:00Z`).toLocaleDateString('en-GB', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+
   return (
-    <div className="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 my-6">
-      <div className="flex items-center justify-between mb-3 text-xs text-[var(--text-secondary)]">
-        <span className="font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-          7-Day Flexible Fare Strip
-        </span>
-        <span className="text-[11px] text-[var(--semantic-success)] font-medium flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-[var(--semantic-success)]"></span>
-          Lowest fare highlighted
+    <section aria-labelledby="fare-strip-title" className="mx-auto my-6 w-full max-w-[1200px] px-4 sm:px-6 lg:px-8">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h2 id="fare-strip-title" className="text-sm font-semibold text-[var(--text-primary)]">
+          Flexible dates <span className="hidden font-normal text-[var(--text-muted)] sm:inline">· {month}</span>
+          {sourceLabel && (
+            <span className="ml-2 rounded-full bg-[var(--semantic-success-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--semantic-success)]">
+              {sourceLabel}
+            </span>
+          )}
+        </h2>
+        <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-[var(--text-muted)]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--semantic-success)]" />
+          Lowest fare of the week
         </span>
       </div>
 
-      {/* Horizontal Momentum Scroll on Touch Devices */}
-      <div className="scroll-momentum-x flex gap-2.5 pb-2">
+      <div role="radiogroup" aria-label="Departure date" className="scroll-momentum-x -mx-1 flex gap-2 px-1 pb-1">
         {dayFares.map((fare) => {
-          const isSelected = fare.dateISO === selectedDate;
+          const selected = fare.dateISO === selectedDate;
           return (
             <button
               key={fare.dateISO}
               type="button"
+              role="radio"
+              aria-checked={selected}
               onClick={() => onSelectDate(fare.dateISO)}
-              className={`flex-1 min-w-[108px] p-3 rounded-[var(--radius-control)] border transition-all text-center select-none touch-target ${
-                isSelected
-                  ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)] shadow-sm'
-                  : 'border-[var(--border-hairline)] bg-white hover:border-[var(--border-strong)]'
+              className={`relative min-w-[96px] flex-1 rounded-[var(--radius-control)] border px-3 py-3 text-center transition-[border-color,background-color,box-shadow,transform] duration-200 active:scale-[0.98] ${
+                selected
+                  ? 'glass-card border-[var(--text-primary)] shadow-[0_0_0_1px_var(--text-primary),0_10px_24px_-14px_rgba(30,58,138,0.45)]'
+                  : 'glass-card hover:-translate-y-0.5'
               }`}
             >
-              <div className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-                {fare.weekday}, {fare.dayNumber}
-              </div>
-
-              {isLoading && isSelected ? (
-                <div className="h-5 w-16 mx-auto mt-1.5 rounded skeleton-shimmer"></div>
+              <span className="block text-[11px] font-medium text-[var(--text-muted)]">
+                {fare.weekday} {fare.dayNumber}
+              </span>
+              {isLoadingAll || (isLoading && selected) ? (
+                <span className="skeleton mx-auto mt-1.5 block h-4 w-14" />
               ) : (
-                <div className="mt-1 flex items-center justify-center gap-1.5">
-                  <span className="text-sm font-semibold text-[var(--text-primary)] tabular-nums">
-                    {convertPrice(fare.lowestPriceInr, currency)}
-                  </span>
-                  {fare.isCheapest && (
-                    <span
-                      className="w-1.5 h-1.5 rounded-full bg-[var(--semantic-success)]"
-                      title="Cheapest day"
-                    ></span>
+                <span
+                  className={`mt-1 block text-sm font-semibold tabular-nums ${
+                    fare.isCheapest ? 'text-[var(--semantic-success)]' : 'text-[var(--text-primary)]'
+                  }`}
+                >
+                  {fare.lowestPriceInr === null ? (
+                    <span className="font-normal text-[var(--text-muted)]" title="No recent fare found for this day">
+                      —
+                    </span>
+                  ) : (
+                    convertPrice(fare.lowestPriceInr, currency)
                   )}
-                </div>
+                </span>
+              )}
+              {fare.isCheapest && (
+                <span
+                  aria-label="Cheapest day"
+                  className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--semantic-success)]"
+                />
               )}
             </button>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

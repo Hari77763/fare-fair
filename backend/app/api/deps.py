@@ -54,33 +54,46 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = credentials.credentials
-    try:
-        payload = verify_token(token)
-    except ValueError as exc:
-        logger.warning("Token verification failed: %s", exc)
+    user = _resolve_access_token(credentials.credentials)
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
-
-    # Attempt to import UserResponse schema from app.schemas.user
-    try:
-        from app.schemas.user import UserResponse
-
-        user_id = UUID(payload.sub) if payload.sub and len(payload.sub) == 36 else DEMO_USER_ID
-        return UserResponse(
-            id=user_id,
-            email="user@fairfare.in",
-            full_name="Demo User",
-            is_active=True,
-            is_verified=True,
-            created_at=datetime.now(timezone.utc),
         )
-    except Exception as exc:
-        logger.debug("Returning dict user response fallback: %s", exc)
-        return get_mock_user()
+    return user
+
+
+def _resolve_access_token(token: str):
+    """Return the UserResponse for a valid *access* token, else None.
+
+    Refresh tokens are rejected here so a long-lived refresh token cannot be
+    used as a bearer token on protected endpoints.
+    """
+    from app.api.v1.auth import get_user_by_id
+    from app.schemas.user import UserResponse
+
+    try:
+        payload = verify_token(token)
+    except ValueError as exc:
+        logger.info("Token verification failed: %s", type(exc).__name__)
+        return None
+
+    if payload.type != "access" or not payload.sub:
+        return None
+
+    record = get_user_by_id(payload.sub)
+    if record is None:
+        return None
+
+    return UserResponse(
+        id=record["id"],
+        email=record["email"],
+        full_name=record["full_name"],
+        is_active=record["is_active"],
+        is_verified=record["is_verified"],
+        created_at=record["created_at"],
+    )
 
 
 async def get_current_active_user(
@@ -107,22 +120,7 @@ async def get_optional_user(
     """Optionally validate Bearer token; return None if token is absent or invalid."""
     if credentials is None:
         return None
-
-    try:
-        payload = verify_token(credentials.credentials)
-        from app.schemas.user import UserResponse
-
-        user_id = UUID(payload.sub) if payload.sub and len(payload.sub) == 36 else DEMO_USER_ID
-        return UserResponse(
-            id=user_id,
-            email="user@fairfare.in",
-            full_name="Demo User",
-            is_active=True,
-            is_verified=True,
-            created_at=datetime.now(timezone.utc),
-        )
-    except Exception:
-        return None
+    return _resolve_access_token(credentials.credentials)
 
 
 class RateLimitDep:
@@ -134,14 +132,17 @@ class RateLimitDep:
 
     async def __call__(self, request: Request) -> None:
         client_ip = request.client.host if request.client else "unknown_client"
+        # Scope the bucket per route so a strict limit on one endpoint (e.g.
+        # register) is not consumed by traffic to another (e.g. login).
+        bucket = f"{request.url.path}:{client_ip}"
         allowed = rate_limiter.check_rate_limit(
-            key=client_ip,
+            key=bucket,
             limit=self.requests_per_minute,
             window_seconds=self.window_seconds,
         )
         if not allowed:
             remaining = rate_limiter.get_remaining_requests(
-                key=client_ip,
+                key=bucket,
                 limit=self.requests_per_minute,
                 window_seconds=self.window_seconds,
             )

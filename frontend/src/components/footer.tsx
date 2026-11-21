@@ -1,80 +1,95 @@
 import React from "react";
 import Link from "next/link";
-import { Plane, ShieldCheck, Heart, AlertCircle, ExternalLink } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { BrandMark } from "./navbar";
+
+const COLUMNS = [
+  {
+    title: "Popular routes",
+    links: [
+      { href: "/search?origin=DEL&destination=BOM", label: "Delhi → Mumbai" },
+      { href: "/search?origin=BLR&destination=DEL", label: "Bengaluru → Delhi" },
+      { href: "/search?origin=DEL&destination=DXB", label: "Delhi → Dubai" },
+      { href: "/search?origin=BOM&destination=LHR", label: "Mumbai → London" },
+      { href: "/price-alerts", label: "Fare trackers & alerts" },
+    ],
+  },
+  {
+    title: "Standards",
+    links: [
+      { href: "/how-it-works", label: "How metasearch works" },
+      { href: "/how-it-works#trust-ranking", label: "Cheapest Trusted ranking" },
+      { href: "/how-it-works#dgca-compliance", label: "DGCA refund standards" },
+      { href: "/about", label: "Zero-scraping policy" },
+      { href: "/about#suppliers", label: "Supplier integrations" },
+    ],
+  },
+];
 
 export function Footer() {
   return (
-    <footer className="w-full bg-slate-900 text-slate-300 pt-16 pb-12 mt-20 border-t border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-slate-800">
-          {/* Col 1: Brand & Mission */}
-          <div className="space-y-4 md:col-span-1">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-amber-400">
-                <Plane className="w-4 h-4 rotate-45" />
-              </div>
-              <span className="font-bold text-xl text-white tracking-tight">
-                Fare<span className="text-amber-400">Fair</span>
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              India&apos;s independent, multi-supplier flight metasearch platform. We search hundreds of airlines and authorized OTAs to find true total prices with zero markup.
+    <footer className="glass-bar mt-24">
+      <div className="mx-auto max-w-[1200px] px-4 pb-10 pt-14 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-10 pb-12 md:grid-cols-12">
+          <div className="space-y-4 md:col-span-5">
+            <BrandMark />
+            <p className="max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">
+              An independent flight metasearch for India. We compare airlines and authorised booking sites and show
+              the true total — with zero FairFare markup.
             </p>
-            <div className="flex items-center gap-2 text-xs text-teal-400 bg-teal-950/60 border border-teal-800/80 px-3 py-2 rounded-xl">
-              <ShieldCheck className="w-4 h-4 shrink-0 text-teal-400" />
-              <span>100% Transparent · No FareFair Booking Fees</span>
+            <div className="inline-flex items-center gap-2 rounded-full glass-card px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]">
+              <ShieldCheck className="h-3.5 w-3.5 text-[var(--semantic-trust)]" />
+              No booking fees, no paid placement
             </div>
           </div>
 
-          {/* Col 2: Quick Links */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-white uppercase tracking-wider">Flight Discovery</h4>
-            <ul className="space-y-2 text-xs text-slate-400">
-              <li><Link href="/search?origin=DEL&destination=BOM" className="hover:text-white transition-colors">Delhi to Mumbai Flights</Link></li>
-              <li><Link href="/search?origin=BLR&destination=DEL" className="hover:text-white transition-colors">Bengaluru to Delhi Flights</Link></li>
-              <li><Link href="/search?origin=DEL&destination=DXB" className="hover:text-white transition-colors">Delhi to Dubai Flights</Link></li>
-              <li><Link href="/search?origin=BOM&destination=LHR" className="hover:text-white transition-colors">Mumbai to London Flights</Link></li>
-              <li><Link href="/price-alerts" className="hover:text-white transition-colors">Live Fare Trackers & Alerts</Link></li>
-            </ul>
-          </div>
-
-          {/* Col 3: Architecture & Governance */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-white uppercase tracking-wider">Metasearch Standards</h4>
-            <ul className="space-y-2 text-xs text-slate-400">
-              <li><Link href="/how-it-works" className="hover:text-white transition-colors">How Metasearch Works</Link></li>
-              <li><Link href="/how-it-works#trust-ranking" className="hover:text-white transition-colors">Cheapest Trusted Algorithm</Link></li>
-              <li><Link href="/how-it-works#dgca-compliance" className="hover:text-white transition-colors">DGCA 2026 Refund Standards</Link></li>
-              <li><Link href="/about" className="hover:text-white transition-colors">Our Zero-Scraping Policy</Link></li>
-              <li><Link href="/about#suppliers" className="hover:text-white transition-colors">Supplier API Integration Guide</Link></li>
-            </ul>
-          </div>
-
-          {/* Col 4: Legal & Compliance */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-white uppercase tracking-wider">Disclaimers & Legal</h4>
-            <div className="text-xs text-slate-400 space-y-2 leading-relaxed">
-              <p>
-                <strong>Important Notice:</strong> FareFair is an independent metasearch comparison service. We do not sell airline tickets or collect passenger booking payments directly.
-              </p>
-              <p>
-                All bookings are completed on the respective airline or authorized OTA website. Mandatory taxes and known convenience fees are disclosed upfront.
-              </p>
+          {COLUMNS.map((col) => (
+            <div key={col.title} className="md:col-span-2">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                {col.title}
+              </h2>
+              <ul className="mt-4 space-y-2.5">
+                {col.links.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
-            <div className="pt-2 flex flex-wrap gap-3 text-xs text-slate-500">
-              <Link href="/privacy" className="hover:text-slate-300">Privacy Policy</Link>
-              <span>·</span>
-              <Link href="/terms" className="hover:text-slate-300">Terms of Use</Link>
-            </div>
+          ))}
+
+          <div className="md:col-span-3">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+              Important
+            </h2>
+            <p className="mt-4 text-sm leading-relaxed text-[var(--text-secondary)]">
+              FairFare is a comparison service. We don&apos;t sell tickets or take payments — every booking is
+              completed with the airline or an authorised seller.
+            </p>
           </div>
         </div>
 
-        {/* Bottom Bar with Aviation Notice */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <p>© {new Date().getFullYear()} FareFair Metasearch India. Built for Indian travelers with full transparency.</p>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>All supplier APIs live & monitored</span>
+        <div className="flex flex-col gap-3 border-t border-[var(--border-hairline)] pt-6 text-xs text-[var(--text-muted)] sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} FairFare Metasearch India</p>
+          <div className="flex items-center gap-5">
+            <Link href="/privacy" className="transition-colors hover:text-[var(--text-primary)]">
+              Privacy
+            </Link>
+            <Link href="/terms" className="transition-colors hover:text-[var(--text-primary)]">
+              Terms
+            </Link>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-[var(--semantic-success)]" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--semantic-success)]" />
+              </span>
+              Demo data
+            </span>
           </div>
         </div>
       </div>

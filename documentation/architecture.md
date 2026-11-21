@@ -1,12 +1,12 @@
-# FareFair — Flight Metasearch Architecture
+# FairFare — Flight Metasearch Architecture
 
-FareFair is an independent, India-first, multi-supplier flight metasearch platform designed to search hundreds of legitimate airlines, OTAs, and authorised ticketing providers with transparent total pricing and zero platform markup.
+FairFare is an independent, India-first, multi-supplier flight metasearch platform designed to search hundreds of legitimate airlines, OTAs, and authorised ticketing providers with transparent total pricing and zero platform markup.
 
 ---
 
 ## 1. Core Architectural Principle
 
-> **FareFair owns the search, comparison, ranking, and price-transparency experience.**  
+> **FairFare owns the search, comparison, ranking, and price-transparency experience.**  
 > **Suppliers provide the underlying flight inventory, schedules, and fare data.**
 
 We do not pretend to hold airline seats or sell tickets directly. All bookings occur directly on the authorized provider's website via secure deep-linking after price revalidation.

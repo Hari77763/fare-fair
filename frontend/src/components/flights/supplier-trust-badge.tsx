@@ -21,7 +21,7 @@ export function SupplierTrustBadge({ supplierName, trustScore }: SupplierTrustBa
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
         onClick={() => setShowTooltip(!showTooltip)}
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors ${
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border whitespace-nowrap transition-colors ${
           isHighTrust
             ? "bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100"
             : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
@@ -66,7 +66,7 @@ export function SupplierTrustBadge({ supplierName, trustScore }: SupplierTrustBa
             </div>
           </div>
           <p className="mt-2 pt-1.5 border-t border-slate-800 text-[10px] text-slate-400 leading-tight">
-            Independent FareFair trust rating. Sellers cannot pay to alter their score.
+            Independent FairFare trust rating. Sellers cannot pay to alter their score.
           </p>
         </div>
       )}

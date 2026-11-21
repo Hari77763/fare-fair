@@ -53,13 +53,13 @@ export function FlightCard({ flight, rankingMode }: FlightCardProps) {
 
   return (
     <>
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all p-5 sm:p-6 mb-4 relative overflow-hidden">
+      <div className="glass-card rounded-2xl lift-on-hover p-5 sm:p-6 mb-4 relative overflow-hidden">
         {/* Top Badges Strip */}
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100 text-xs">
           <div className="flex items-center gap-2">
             {rankingMode === "cheapest" && (
-              <span className="px-2.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-900 border border-amber-200 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-600" />
+              <span className="px-2.5 py-0.5 rounded-full font-bold bg-blue-100 text-blue-900 border border-blue-200 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-blue-600" />
                 Absolute Cheapest
               </span>
             )}
@@ -79,7 +79,7 @@ export function FlightCard({ flight, rankingMode }: FlightCardProps) {
           </div>
 
           <div className="text-[11px] text-slate-400">
-            Last revalidated: {new Date(activeOffer.lastVerifiedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+            Last revalidated: {formatTime(activeOffer.lastVerifiedAt)} IST
           </div>
         </div>
 
@@ -118,7 +118,7 @@ export function FlightCard({ flight, rankingMode }: FlightCardProps) {
               <div className="relative my-2 flex items-center">
                 <div className="w-2 h-2 rounded-full border-2 border-slate-300 bg-white"></div>
                 <div className="flex-1 h-[2px] bg-slate-200"></div>
-                <Plane className="w-3.5 h-3.5 text-amber-500 mx-1 rotate-90" />
+                <Plane className="w-3.5 h-3.5 text-blue-500 mx-1 rotate-90" />
                 <div className="flex-1 h-[2px] bg-slate-200"></div>
                 <div className="w-2 h-2 rounded-full border-2 border-slate-300 bg-white"></div>
               </div>
@@ -131,7 +131,7 @@ export function FlightCard({ flight, rankingMode }: FlightCardProps) {
             <div className="text-right">
               <div className="text-xl sm:text-2xl font-bold text-navy">
                 {formatTime(flight.arrivalTime)}
-                {nextDay && <span className="text-xs text-amber-600 font-bold ml-1">+1d</span>}
+                {nextDay && <span className="text-xs text-blue-600 font-bold ml-1">+1d</span>}
               </div>
               <div className="text-xs font-bold text-slate-700 mt-0.5">
                 {flight.arrivalAirport}
@@ -141,7 +141,7 @@ export function FlightCard({ flight, rankingMode }: FlightCardProps) {
 
           {/* Col 3: Price & Direct Booking CTA (3 cols) */}
           <div className="md:col-span-3 text-right flex flex-col items-end justify-center border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
-            <div className="text-2xl sm:text-3xl font-extrabold text-navy">
+            <div className="text-2xl sm:text-3xl font-semibold tracking-tight text-navy">
               {formatPriceINR(activeOffer.totalPaise)}
             </div>
             <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
@@ -155,7 +155,7 @@ export function FlightCard({ flight, rankingMode }: FlightCardProps) {
               Includes taxes & mandatory fees
             </div>
 
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedOfferForModal(activeOffer)}
@@ -163,11 +163,17 @@ export function FlightCard({ flight, rankingMode }: FlightCardProps) {
               >
                 Price Breakdown
               </button>
+              <Link
+                href={`/flights/${flight.id}`}
+                className="text-xs text-slate-500 hover:text-navy underline font-medium"
+              >
+                Details
+              </Link>
               <a
                 href={activeOffer.deepLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-5 py-2.5 rounded-full bg-navy text-white text-xs font-bold hover:bg-navy-light transition-all shadow-md hover:shadow-lg flex items-center gap-1.5"
+                className="px-5 py-2.5 rounded-full bg-navy text-white text-xs font-bold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg flex items-center gap-1.5"
               >
                 <span>View Deal</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -192,7 +198,7 @@ export function FlightCard({ flight, rankingMode }: FlightCardProps) {
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1 text-slate-700 font-semibold hover:text-amber-600 transition-colors"
+            className="flex items-center gap-1 text-slate-700 font-semibold hover:text-blue-600 transition-colors"
           >
             <span>Compare all {flight.offers.length} sellers</span>
             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -211,7 +217,7 @@ export function FlightCard({ flight, rankingMode }: FlightCardProps) {
                   key={offer.supplierId + idx}
                   className={`flex flex-wrap items-center justify-between p-3 rounded-2xl border transition-colors ${
                     offer.supplierId === activeOffer.supplierId
-                      ? "bg-amber-50/50 border-amber-200"
+                      ? "bg-blue-50/50 border-blue-200"
                       : "bg-slate-50/80 border-slate-200/80 hover:bg-slate-50"
                   }`}
                 >

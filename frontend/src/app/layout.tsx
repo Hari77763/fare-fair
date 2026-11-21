@@ -1,14 +1,39 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { LiquidGlass } from "@/components/LiquidGlass";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const sans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  weight: ["500", "600"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "FareFair — India's Transparent Flight Metasearch",
+  title: {
+    default: "FairFare — Transparent flight metasearch for India",
+    template: "%s · FairFare",
+  },
   description:
-    "Compare flight prices across hundreds of airlines and booking sites. India's first transparent flight metasearch engine with trust rankings and no hidden fees.",
+    "Compare flight prices across airlines and authorised booking sites. Two independent rankings, itemised fees and zero FairFare markup.",
 };
+
+export const viewport: Viewport = {
+  themeColor: "#F7F8FA",
+  width: "device-width",
+  initialScale: 1,
+};
+
+// Marks the document as JS-capable before first paint so scroll-reveal
+// elements only start hidden when they can actually be revealed.
+const revealBootstrap = `document.documentElement.classList.add('js-reveal');`;
 
 export default function RootLayout({
   children,
@@ -16,23 +41,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en-IN" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                  for(var reg of registrations) {
-                    reg.unregister();
-                  }
-                });
-              }
-            `,
-          }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: revealBootstrap }} />
       </head>
-      <body className={`${inter.variable} font-sans`}>{children}</body>
+      <body className="font-sans">
+        <LiquidGlass />
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-[var(--text-primary)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+        >
+          Skip to content
+        </a>
+        {children}
+      </body>
     </html>
   );
 }

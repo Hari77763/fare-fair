@@ -32,10 +32,10 @@ export default function FlightDetailPage({ params }: { params: { id: string } })
   const bestOffer = sortedOffers[0];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-8 py-10 flex-1 w-full">
+      <main id="main" className="max-w-5xl mx-auto px-4 sm:px-8 py-10 flex-1 w-full">
         {/* Back Link */}
         <Link
           href={`/search?origin=${flight.departureAirport}&destination=${flight.arrivalAirport}`}
@@ -46,24 +46,24 @@ export default function FlightDetailPage({ params }: { params: { id: string } })
         </Link>
 
         {/* Flight Overview Header Card */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm mb-8">
+        <div className="glass-card rounded-2xl p-6 sm:p-8 shadow-sm mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900">
+                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-900">
                   {segment.flightNumber}
                 </span>
                 <span className="text-xs font-semibold text-slate-700">{segment.airlineName}</span>
                 <span className="text-xs text-slate-400">· {segment.aircraft}</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-navy mt-2">
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-navy mt-2">
                 {flight.departureAirport} → {flight.arrivalAirport}
               </h1>
             </div>
 
             <div className="text-left sm:text-right">
               <span className="text-xs text-slate-400 block">Lowest available fare</span>
-              <span className="text-3xl font-extrabold text-navy">{formatPriceINR(bestOffer.totalPaise)}</span>
+              <span className="text-3xl font-semibold tracking-tight text-navy">{formatPriceINR(bestOffer.totalPaise)}</span>
               <span className="block text-[11px] text-teal-700 font-medium">via {bestOffer.supplierName}</span>
             </div>
           </div>
@@ -81,7 +81,7 @@ export default function FlightDetailPage({ params }: { params: { id: string } })
               <div className="relative my-2 flex items-center">
                 <div className="w-2.5 h-2.5 rounded-full border-2 border-slate-300 bg-white"></div>
                 <div className="flex-1 h-[2px] bg-slate-200"></div>
-                <Plane className="w-4 h-4 text-amber-500 mx-1 rotate-90" />
+                <Plane className="w-4 h-4 text-blue-500 mx-1 rotate-90" />
                 <div className="flex-1 h-[2px] bg-slate-200"></div>
                 <div className="w-2.5 h-2.5 rounded-full border-2 border-slate-300 bg-white"></div>
               </div>
@@ -99,14 +99,14 @@ export default function FlightDetailPage({ params }: { params: { id: string } })
         </div>
 
         {/* Multi-Supplier Comparison Section */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm mb-8">
+        <div className="glass-card rounded-2xl p-6 sm:p-8 shadow-sm mb-8">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
             <div>
               <h2 className="text-base font-bold text-navy uppercase tracking-wider">
                 Compare All {flight.offers.length} Booking Sellers
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Transparent final pricing with no FareFair markup
+                Transparent final pricing with no FairFare markup
               </p>
             </div>
             <span className="text-xs font-bold text-teal-800 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
@@ -125,7 +125,7 @@ export default function FlightDetailPage({ params }: { params: { id: string } })
                     <span className="text-sm font-bold text-navy">{offer.supplierName}</span>
                     <SupplierTrustBadge supplierName={offer.supplierName} trustScore={offer.trustScore} />
                     {idx === 0 && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
                         Cheapest Deal
                       </span>
                     )}
@@ -142,7 +142,7 @@ export default function FlightDetailPage({ params }: { params: { id: string } })
 
                 <div className="flex items-center justify-between sm:justify-end gap-5">
                   <div className="text-right">
-                    <span className="text-xl font-extrabold text-navy">{formatPriceINR(offer.totalPaise)}</span>
+                    <span className="text-xl font-semibold tracking-tight text-navy">{formatPriceINR(offer.totalPaise)}</span>
                     <button
                       type="button"
                       onClick={() => setSelectedOfferForModal(offer)}
@@ -156,7 +156,7 @@ export default function FlightDetailPage({ params }: { params: { id: string } })
                     href={offer.deepLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-5 py-2.5 rounded-full bg-navy text-white text-xs font-bold hover:bg-navy-light transition-all shadow-md flex items-center gap-1.5"
+                    className="px-5 py-2.5 rounded-full bg-navy text-white text-xs font-bold hover:bg-blue-700 transition-all shadow-md flex items-center gap-1.5"
                   >
                     <span>Book on {offer.supplierName}</span>
                     <ExternalLink className="w-3.5 h-3.5" />

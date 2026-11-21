@@ -1,122 +1,207 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Plane, Globe, User, Menu, X, ShieldCheck, Bell } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Bookmark, Menu, X } from "lucide-react";
+import type { CurrencyCode } from "@/types/flight";
+import { Segmented } from "./Segmented";
+import { useDismiss } from "@/hooks/useDismiss";
 
-export function Navbar() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+const NAV_LINKS = [
+  { href: "/", label: "Flights" },
+  { href: "/search", label: "Compare sellers" },
+  { href: "/price-alerts", label: "Price alerts" },
+  { href: "/how-it-works", label: "How it works" },
+  { href: "/about", label: "About" },
+];
+
+interface NavbarProps {
+  /** When provided, shows the live currency switcher (home page). */
+  currency?: CurrencyCode;
+  onCurrencyChange?: (c: CurrencyCode) => void;
+  /** When provided, shows the saved-flights pill. */
+  savedCount?: number;
+  showSavedOnly?: boolean;
+  onToggleSaved?: () => void;
+}
+
+export function BrandMark({ className = "" }: { className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-2.5 ${className}`}>
+      <span className="relative grid h-8 w-8 place-items-center rounded-[10px] bg-[var(--text-primary)] shadow-[0_1px_2px_rgba(11,18,32,0.3),inset_0_1px_0_rgba(255,255,255,0.12)]">
+        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" aria-hidden="true">
+          <path d="M12 3 3.5 19.5 12 15.6l8.5 3.9L12 3Z" fill="#fff" />
+          <path d="M12 3v12.6" stroke="var(--accent-primary)" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+      </span>
+      <span className="text-[17px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">
+        Fair<span className="text-[var(--accent-primary)]">Fare</span>
+      </span>
+    </span>
+  );
+}
+
+export function Navbar({
+  currency,
+  onCurrencyChange,
+  savedCount,
+  showSavedOnly,
+  onToggleSaved,
+}: NavbarProps) {
+  const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
+  // Only flips a boolean at the threshold, so scrolling does not re-render.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => setMenuOpen(false), [pathname]);
+  useDismiss([menuRef, toggleRef], () => setMenuOpen(false), menuOpen);
+
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname?.startsWith(href));
 
   return (
-    <header className="relative z-50 w-full px-4 sm:px-8 py-5">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-xl bg-navy text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
-            <Plane className="w-5 h-5 text-amber-400 rotate-45" />
-          </div>
-          <div>
-            <span className="font-bold text-2xl tracking-tight text-navy">
-              Fare<span className="text-amber-500">Fair</span>
-            </span>
-            <span className="hidden sm:inline-block ml-2 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full border border-amber-200">
-              Metasearch
-            </span>
-          </div>
+    <header
+      className="sticky top-0 w-full px-3 pt-2.5 sm:px-4"
+      style={{ zIndex: "var(--z-sticky-header)", height: "var(--header-h)" }}
+    >
+      {/* Floating glass capsule; tightens and deepens once the page scrolls */}
+      <div
+        className={`glass mx-auto flex h-[50px] max-w-[1180px] items-center justify-between gap-4 rounded-full pl-2.5 pr-2 transition-[box-shadow,transform,max-width] duration-500 ease-out-expo ${
+          scrolled ? "max-w-[1120px] shadow-[0_18px_40px_-18px_rgba(30,58,138,0.4)]" : ""
+        }`}
+      >
+        <Link href="/" aria-label="FairFare home" className="shrink-0 rounded-lg">
+          <BrandMark />
         </Link>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-700">
-          <Link href="/" className="hover:text-navy transition-colors font-semibold text-navy">
-            Home
-          </Link>
-          <Link href="/search" className="hover:text-navy transition-colors">
-            Search Flights
-          </Link>
-          <Link href="/price-alerts" className="hover:text-navy transition-colors flex items-center gap-1.5">
-            <Bell className="w-3.5 h-3.5 text-amber-600" />
-            Price Alerts
-          </Link>
-          <Link href="/how-it-works" className="hover:text-navy transition-colors">
-            How It Works
-          </Link>
-          <Link href="/about" className="hover:text-navy transition-colors">
-            About Us
-          </Link>
+        <nav aria-label="Primary" className="hidden items-center gap-1 lg:flex">
+          {NAV_LINKS.map((link) => {
+            const active = isActive(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={active ? "page" : undefined}
+                className={`relative rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-[background-color,color,box-shadow] duration-300 ${
+                  active
+                    ? "bg-white/85 text-[var(--text-primary)] shadow-[inset_0_1px_0_#fff,0_1px_2px_rgba(11,18,32,0.08),0_4px_12px_-6px_rgba(30,58,138,0.3)]"
+                    : "text-[var(--text-muted)] hover:bg-white/50 hover:text-[var(--text-primary)]"
+                }`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Right Action Icons & Auth */}
-        <div className="hidden sm:flex items-center gap-4">
-          {/* Currency / Language Pill */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white/80 backdrop-blur-sm text-xs font-medium text-slate-700 shadow-sm">
-            <Globe className="w-3.5 h-3.5 text-slate-500" />
-            <span>INR (₹)</span>
-            <span className="text-slate-300">|</span>
-            <span>IN</span>
-          </div>
+        <div className="flex items-center gap-2">
+          {currency && onCurrencyChange && (
+            <Segmented
+              ariaLabel="Display currency"
+              size="sm"
+              className="hidden sm:inline-flex"
+              value={currency}
+              onChange={onCurrencyChange}
+              options={[
+                { value: "INR", label: "₹ INR" },
+                { value: "USD", label: "$ USD" },
+                { value: "EUR", label: "€ EUR" },
+              ]}
+            />
+          )}
 
-          {/* User Account / Dashboard Link */}
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-800 shadow-sm transition-colors"
-          >
-            <User className="w-3.5 h-3.5 text-slate-600" />
-            <span>Dashboard</span>
-          </Link>
+          {typeof savedCount === "number" && (
+            <button
+              type="button"
+              onClick={onToggleSaved}
+              aria-pressed={!!showSavedOnly}
+              aria-label={`Saved flights (${savedCount})${showSavedOnly ? ", showing saved only" : ""}`}
+              className={`btn h-9 px-3 text-xs ${showSavedOnly ? "btn-accent" : "btn-secondary"}`}
+            >
+              <Bookmark className={`h-3.5 w-3.5 ${showSavedOnly ? "fill-current" : ""}`} />
+              <span className="hidden sm:inline">Saved</span>
+              <span
+                key={savedCount}
+                className={`tabular-nums ${savedCount > 0 ? "animate-pop-in" : "opacity-50"}`}
+              >
+                {savedCount}
+              </span>
+            </button>
+          )}
 
-          {/* Sign In CTA Button */}
-          <Link
-            href="/dashboard"
-            className="px-5 py-2 rounded-full bg-navy text-white text-xs font-semibold hover:bg-navy-light shadow-md hover:shadow-lg transition-all"
+          {!currency && (
+            <Link href="/dashboard" className="btn btn-primary hidden h-9 px-4 text-xs sm:inline-flex">
+              Dashboard
+            </Link>
+          )}
+
+          <button
+            ref={toggleRef}
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            className="btn btn-secondary h-9 w-9 p-0 lg:hidden"
           >
-            Sign In
-          </Link>
+            {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
         </div>
-
-        {/* Mobile Hamburger Button */}
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 rounded-lg bg-white/80 border border-slate-200 text-slate-700 shadow-sm"
-          aria-label="Toggle menu"
-        >
-          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
       </div>
 
-      {/* Mobile Drawer Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden mt-4 p-5 rounded-2xl bg-white border border-slate-200 shadow-xl space-y-4">
-          <nav className="flex flex-col gap-3 text-sm font-medium text-slate-800">
-            <Link href="/" onClick={() => setMobileMenuOpen(false)} className="py-2 border-b border-slate-100">
-              Home
-            </Link>
-            <Link href="/search" onClick={() => setMobileMenuOpen(false)} className="py-2 border-b border-slate-100">
-              Search Flights
-            </Link>
-            <Link href="/price-alerts" onClick={() => setMobileMenuOpen(false)} className="py-2 border-b border-slate-100 flex items-center justify-between">
-              <span>Price Alerts</span>
-              <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full font-semibold">Live</span>
-            </Link>
-            <Link href="/how-it-works" onClick={() => setMobileMenuOpen(false)} className="py-2 border-b border-slate-100">
-              How It Works
-            </Link>
-            <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="py-2 border-b border-slate-100">
-              About Us
-            </Link>
-            <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="py-2">
-              My Dashboard
-            </Link>
+      {/* Mobile menu */}
+      {menuOpen && (
+        <div
+          ref={menuRef}
+          id="mobile-menu"
+          className="glass glass-strong absolute inset-x-3 top-[calc(var(--header-h)+2px)] origin-top animate-pop-in rounded-[22px] p-2 lg:hidden"
+          style={{ position: "absolute" }}
+        >
+          <nav aria-label="Mobile" className="flex flex-col">
+            {[...NAV_LINKS, { href: "/dashboard", label: "Dashboard" }].map((link) => {
+              const active = isActive(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex items-center justify-between rounded-[var(--radius-control)] px-4 py-3 text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+                      : "text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]"
+                  }`}
+                >
+                  {link.label}
+                  {active && <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-primary)]" />}
+                </Link>
+              );
+            })}
           </nav>
-          <div className="pt-2 flex items-center justify-between border-t border-slate-100">
-            <span className="text-xs text-slate-500 font-medium">Currency: INR (₹)</span>
-            <Link
-              href="/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-4 py-2 rounded-full bg-navy text-white text-xs font-semibold"
-            >
-              Sign In
-            </Link>
-          </div>
+          {currency && onCurrencyChange && (
+            <div className="mt-2 flex items-center justify-between border-t border-[var(--border-hairline)] px-4 pb-2 pt-3 sm:hidden">
+              <span className="text-xs font-medium text-[var(--text-muted)]">Currency</span>
+              <Segmented
+                ariaLabel="Display currency"
+                size="sm"
+                value={currency}
+                onChange={onCurrencyChange}
+                options={[
+                  { value: "INR", label: "₹" },
+                  { value: "USD", label: "$" },
+                  { value: "EUR", label: "€" },
+                ]}
+              />
+            </div>
+          )}
         </div>
       )}
     </header>

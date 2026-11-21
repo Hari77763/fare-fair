@@ -47,7 +47,7 @@ export function FlightFilters({
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-6">
+    <div className="glass-card rounded-2xl p-6 shadow-sm space-y-6">
       <div className="flex items-center justify-between pb-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-slate-500" />
@@ -56,7 +56,7 @@ export function FlightFilters({
         <button
           type="button"
           onClick={onReset}
-          className="text-xs text-slate-400 hover:text-amber-600 flex items-center gap-1 transition-colors"
+          className="text-xs text-slate-400 hover:text-blue-600 flex items-center gap-1 transition-colors"
         >
           <RotateCcw className="w-3 h-3" />
           <span>Reset</span>
@@ -76,7 +76,7 @@ export function FlightFilters({
           step="25000"
           value={maxPrice}
           onChange={(e) => onPriceChange(Number(e.target.value))}
-          className="w-full accent-amber-500 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
+          className="w-full accent-blue-500 h-1.5 bg-slate-100 rounded-lg cursor-pointer"
         />
         <div className="flex justify-between text-[10px] text-slate-400">
           <span>₹3,000</span>
@@ -101,7 +101,7 @@ export function FlightFilters({
                 type="checkbox"
                 checked={selectedStops.includes(item.stop)}
                 onChange={() => handleStopToggle(item.stop)}
-                className="rounded border-slate-300 text-amber-500 focus:ring-amber-400"
+                className="rounded border-slate-300 text-blue-500 focus:ring-blue-400"
               />
               <span>{item.label}</span>
             </label>
@@ -122,7 +122,7 @@ export function FlightFilters({
                 type="checkbox"
                 checked={selectedAirlines.includes(airline.code)}
                 onChange={() => handleAirlineToggle(airline.code)}
-                className="rounded border-slate-300 text-amber-500 focus:ring-amber-400"
+                className="rounded border-slate-300 text-blue-500 focus:ring-blue-400"
               />
               <span>{airline.name}</span>
             </label>
@@ -136,7 +136,7 @@ export function FlightFilters({
           Independent Rankings
         </span>
         <p className="text-[10px] text-teal-700 leading-relaxed">
-          FareFair does not prioritize airlines or OTAs for payment. Toggle between Absolute Cheapest and Cheapest Trusted at any time.
+          FairFare does not prioritize airlines or OTAs for payment. Toggle between Absolute Cheapest and Cheapest Trusted at any time.
         </p>
       </div>
     </div>

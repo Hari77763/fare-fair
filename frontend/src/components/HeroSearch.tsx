@@ -1,9 +1,18 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Airport, TripType, CabinClass } from '../types/flight';
-import { majorAirports } from '../data/mockFlights';
-import { ArrowLeftRight, Calendar, Users, MapPin, ChevronDown, Check, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowLeftRight, Check, Loader2, Minus, Plus, Search } from 'lucide-react';
+import type { Airport, TripType, CabinClass } from '../types/flight';
+import { AIRPORTS } from '../data/airports';
+import { AirportPicker } from './AirportPicker';
+import { Segmented } from './Segmented';
+import { useDismiss } from '../hooks/useDismiss';
+
+export interface Passengers {
+  adults: number;
+  children: number;
+  infants: number;
+}
 
 interface HeroSearchProps {
   tripType: TripType;
@@ -16,13 +25,76 @@ interface HeroSearchProps {
   onDepartureDateChange: (d: string) => void;
   returnDate?: string;
   onReturnDateChange: (d?: string) => void;
-  passengers: { adults: number; children: number; infants: number };
-  onPassengersChange: (p: { adults: number; children: number; infants: number }) => void;
+  passengers: Passengers;
+  onPassengersChange: (p: Passengers) => void;
   cabinClass: CabinClass;
   onCabinClassChange: (c: CabinClass) => void;
   onSearch: () => void;
-  sentinelRef: React.RefObject<HTMLDivElement | null>;
-  originInputRef?: React.RefObject<HTMLInputElement | null>;
+  isSearching: boolean;
+  sentinelRef: React.RefObject<HTMLDivElement>;
+  originTriggerRef?: React.RefObject<HTMLButtonElement>;
+}
+
+const MAX_TRAVELLERS = 9;
+const CABINS: CabinClass[] = ['Economy', 'Premium Economy', 'Business'];
+
+function todayISO() {
+  const d = new Date();
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function travellerSummary(p: Passengers) {
+  const total = p.adults + p.children + p.infants;
+  return `${total} traveller${total === 1 ? '' : 's'}`;
+}
+
+function Stepper({
+  label,
+  hint,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between py-2.5">
+      <div>
+        <div className="text-sm font-medium text-[var(--text-primary)]">{label}</div>
+        <div className="text-xs text-[var(--text-muted)]">{hint}</div>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          aria-label={`Fewer ${label.toLowerCase()}`}
+          disabled={value <= min}
+          onClick={() => onChange(value - 1)}
+          className="btn btn-secondary h-8 w-8 p-0"
+        >
+          <Minus className="h-3.5 w-3.5" />
+        </button>
+        <span className="w-4 text-center text-sm font-semibold tabular-nums" aria-live="polite">
+          {value}
+        </span>
+        <button
+          type="button"
+          aria-label={`More ${label.toLowerCase()}`}
+          disabled={value >= max}
+          onClick={() => onChange(value + 1)}
+          className="btn btn-secondary h-8 w-8 p-0"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function HeroSearch({
@@ -41,352 +113,280 @@ export function HeroSearch({
   cabinClass,
   onCabinClassChange,
   onSearch,
+  isSearching,
   sentinelRef,
-  originInputRef,
+  originTriggerRef,
 }: HeroSearchProps) {
-  // Combobox popover states
-  const [originOpen, setOriginOpen] = useState(false);
-  const [destOpen, setDestOpen] = useState(false);
-  const [passengersOpen, setPassengersOpen] = useState(false);
-  const [originQuery, setOriginQuery] = useState('');
-  const [destQuery, setDestQuery] = useState('');
-  const [isSwapping, setIsSwapping] = useState(false);
+  const [swapTurns, setSwapTurns] = useState(0);
+  const [travellersOpen, setTravellersOpen] = useState(false);
+  const [minDate, setMinDate] = useState<string | undefined>(undefined);
+  const travellersRef = useRef<HTMLDivElement>(null);
 
-  // Swap animation trigger
+  // Computed after mount so server and client markup match.
+  useEffect(() => setMinDate(todayISO()), []);
+  useDismiss([travellersRef], () => setTravellersOpen(false), travellersOpen);
+
+  const isRoundTrip = tripType === 'round-trip';
+  const returnInvalid = isRoundTrip && !!returnDate && returnDate < departureDate;
+  const total = passengers.adults + passengers.children + passengers.infants;
+
   const handleSwap = () => {
-    setIsSwapping(true);
-    const temp = origin;
+    setSwapTurns((t) => t + 1);
     onOriginChange(destination);
-    onDestinationChange(temp);
-    setTimeout(() => setIsSwapping(false), 240);
+    onDestinationChange(origin);
   };
 
-  const filteredOriginAirports = majorAirports.filter(
-    (a) =>
-      a.code !== destination.code &&
-      (a.code.toLowerCase().includes(originQuery.toLowerCase()) ||
-        a.city.toLowerCase().includes(originQuery.toLowerCase()) ||
-        a.name.toLowerCase().includes(originQuery.toLowerCase()))
-  );
+  const handleDepartureChange = (value: string) => {
+    onDepartureDateChange(value);
+    // Keep the return date valid instead of silently allowing an impossible trip
+    if (returnDate && value && returnDate < value) onReturnDateChange(value);
+  };
 
-  const filteredDestAirports = majorAirports.filter(
-    (a) =>
-      a.code !== origin.code &&
-      (a.code.toLowerCase().includes(destQuery.toLowerCase()) ||
-        a.city.toLowerCase().includes(destQuery.toLowerCase()) ||
-        a.name.toLowerCase().includes(destQuery.toLowerCase()))
-  );
-
-  const totalPassengers = passengers.adults + passengers.children + passengers.infants;
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSearching || returnInvalid || !departureDate) return;
+    onSearch();
+  };
 
   return (
-    <div className="w-full max-w-[1200px] mx-auto pt-8 sm:pt-14 pb-8 px-4 sm:px-6 lg:px-8">
-      {/* Editorial Headline */}
-      <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10 select-none">
-        <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight text-[var(--text-primary)] leading-[1.12]">
-          Pure aviation metasearch.
+    <div className="relative mx-auto w-full max-w-[1200px] px-4 pb-6 pt-10 sm:px-6 sm:pt-16 lg:px-8">
+      {/* Editorial headline */}
+      <div className="mx-auto mb-9 max-w-2xl text-center sm:mb-11">
+        <p className="mb-4 inline-flex animate-fade-up items-center gap-2 glass-card rounded-full px-3 py-1 text-xs font-medium text-[var(--text-secondary)]">
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--semantic-success)]" />
+          Independent · Zero FairFare markup
+        </p>
+        <h1
+          className="animate-fade-up text-[34px] font-semibold leading-[1.05] tracking-[-0.035em] text-[var(--text-primary)] sm:text-[56px]"
+          style={{ animationDelay: '60ms' }}
+        >
+          Pure aviation <span className="text-liquid">metasearch.</span>
         </h1>
-        <p className="text-[var(--text-secondary)] text-sm sm:text-base mt-3 font-normal leading-relaxed">
-          Zero hidden checkout fees. Dual price rankings across all certified carriers.
+        <p
+          className="mx-auto mt-4 max-w-lg animate-fade-up text-[15px] leading-relaxed text-[var(--text-secondary)] sm:text-[17px]"
+          style={{ animationDelay: '120ms' }}
+        >
+          Every fare itemised, every seller ranked twice — cheapest overall and cheapest you can trust.
         </p>
       </div>
 
-      {/* Main Unified Search Card */}
-      <div className="bg-[var(--bg-surface)] rounded-[var(--radius-card)] border border-[var(--border-hairline)] shadow-[var(--shadow-card)] p-4 sm:p-6 lg:p-7 relative z-[var(--z-base)]">
-        {/* Trip Type Segmented Control with animated sliding pill */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-[var(--border-hairline)]">
-          <div className="inline-flex items-center bg-[var(--bg-subtle)] p-1 rounded-full border border-[var(--border-hairline)] text-xs font-semibold">
-            {(['round-trip', 'one-way', 'multi-city'] as TripType[]).map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => onTripTypeChange(type)}
-                className={`px-4 py-1.5 rounded-full capitalize transition-all touch-target ${
-                  tripType === type
-                    ? 'bg-white text-[var(--accent-primary)] shadow-sm'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                {type.replace('-', ' ')}
-              </button>
-            ))}
-          </div>
-
-          <div className="text-xs font-medium text-[var(--text-muted)] flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[var(--semantic-success)]"></span>
-            <span>Real-time GDS & NDC Availability</span>
-          </div>
+      {/* Search card */}
+      <form
+        onSubmit={submit}
+        aria-label="Flight search"
+        className="glass animate-fade-up rounded-[26px] p-3 sm:p-5"
+        style={{ animationDelay: '180ms', zIndex: 'var(--z-base)' }}
+      >
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-1">
+          <Segmented<TripType>
+            ariaLabel="Trip type"
+            size="sm"
+            value={tripType}
+            onChange={(t) => {
+              onTripTypeChange(t);
+              if (t === 'round-trip' && !returnDate) onReturnDateChange(departureDate);
+            }}
+            options={[
+              { value: 'round-trip', label: 'Round trip' },
+              { value: 'one-way', label: 'One way' },
+              { value: 'multi-city', label: 'Multi-city', disabled: true, hint: 'Multi-city search is coming soon' },
+            ]}
+          />
+          <span className="hidden items-center gap-2 text-xs text-[var(--text-muted)] sm:inline-flex">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-[var(--semantic-success)]" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--semantic-success)]" />
+            </span>
+            GDS & NDC availability (demo)
+          </span>
         </div>
 
-        {/* Inputs Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-          {/* Origin Combobox (4 cols) */}
-          <div className="md:col-span-4 relative">
-            <div
-              onClick={() => {
-                setOriginOpen(true);
-                setDestOpen(false);
-              }}
-              className="p-3.5 rounded-[var(--radius-control)] border border-[var(--border-hairline)] hover:border-[var(--border-strong)] bg-white cursor-pointer transition-colors"
-            >
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                From
-              </div>
-              <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-xl sm:text-2xl font-semibold text-[var(--text-primary)]">
-                  {origin.city}
-                </span>
-                <span className="text-xs font-bold font-mono px-1.5 py-0.5 bg-[var(--bg-subtle)] text-[var(--text-secondary)] rounded">
-                  {origin.code}
-                </span>
-              </div>
-              <div className="text-xs text-[var(--text-secondary)] truncate mt-0.5">{origin.name}</div>
-            </div>
-
-            {/* Origin Popover */}
-            {originOpen && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-[var(--radius-control)] shadow-xl border border-[var(--border-hairline)] p-3 z-[var(--z-popover)]">
-                <div className="flex items-center justify-between pb-2 border-b border-[var(--border-hairline)] mb-2">
-                  <span className="text-xs font-semibold text-[var(--text-muted)] uppercase">
-                    Select Origin
-                  </span>
-                  <button onClick={() => setOriginOpen(false)} className="text-[var(--text-muted)] p-1">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  autoFocus
-                  ref={originInputRef}
-                  placeholder="Type city or IATA (e.g. DEL)"
-                  value={originQuery}
-                  onChange={(e) => setOriginQuery(e.target.value)}
-                  className="w-full text-xs p-2 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-hairline)] mb-2 outline-none focus:border-[var(--accent-primary)]"
-                />
-                <div className="max-h-52 overflow-y-auto space-y-1">
-                  {filteredOriginAirports.map((a) => (
-                    <button
-                      key={a.code}
-                      type="button"
-                      onClick={() => {
-                        onOriginChange(a);
-                        setOriginOpen(false);
-                      }}
-                      className="w-full text-left p-2 rounded-lg text-xs hover:bg-[var(--accent-soft)] flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-semibold text-[var(--text-primary)]">{a.city}</div>
-                        <div className="text-[10px] text-[var(--text-muted)]">{a.name}</div>
-                      </div>
-                      <span className="font-mono font-bold text-xs bg-[var(--bg-subtle)] px-2 py-0.5 rounded">
-                        {a.code}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Swap Button (1 col or centered micro-button) */}
-          <div className="md:col-span-1 flex justify-center -my-2 md:my-0">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-12 md:items-stretch">
+          {/* Route */}
+          <div className="relative grid grid-cols-1 gap-2 md:col-span-6 md:grid-cols-2">
+            <AirportPicker
+              label="From"
+              value={origin}
+              onChange={onOriginChange}
+              airports={AIRPORTS}
+              excludeCode={destination.code}
+              triggerRef={originTriggerRef}
+            />
+            <AirportPicker
+              label="To"
+              value={destination}
+              onChange={onDestinationChange}
+              airports={AIRPORTS}
+              excludeCode={origin.code}
+            />
             <button
               type="button"
               onClick={handleSwap}
-              className={`w-10 h-10 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-surface)] hover:bg-[var(--bg-subtle)] shadow-sm flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-transform touch-target ${
-                isSwapping ? 'rotate-180' : ''
-              }`}
-              style={{ transitionDuration: '240ms', transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)' }}
-              aria-label="Swap origin and destination"
+              aria-label={`Swap ${origin.city} and ${destination.city}`}
+              className="btn btn-secondary absolute left-1/2 top-1/2 z-[2] h-9 w-9 -translate-x-1/2 -translate-y-1/2 rotate-90 p-0 text-[var(--text-secondary)] hover:text-[var(--accent-primary)] md:rotate-0"
             >
-              <ArrowLeftRight className="w-4 h-4" />
+              <ArrowLeftRight
+                className="h-4 w-4 transition-transform duration-500 ease-out-quint"
+                style={{ transform: `rotate(${swapTurns * 180}deg)` }}
+              />
             </button>
           </div>
 
-          {/* Destination Combobox (4 cols) */}
-          <div className="md:col-span-4 relative">
-            <div
-              onClick={() => {
-                setDestOpen(true);
-                setOriginOpen(false);
-              }}
-              className="p-3.5 rounded-[var(--radius-control)] border border-[var(--border-hairline)] hover:border-[var(--border-strong)] bg-white cursor-pointer transition-colors"
-            >
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                To
-              </div>
-              <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-xl sm:text-2xl font-semibold text-[var(--text-primary)]">
-                  {destination.city}
-                </span>
-                <span className="text-xs font-bold font-mono px-1.5 py-0.5 bg-[var(--bg-subtle)] text-[var(--text-secondary)] rounded">
-                  {destination.code}
-                </span>
-              </div>
-              <div className="text-xs text-[var(--text-secondary)] truncate mt-0.5">
-                {destination.name}
-              </div>
-            </div>
-
-            {/* Destination Popover */}
-            {destOpen && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-[var(--radius-control)] shadow-xl border border-[var(--border-hairline)] p-3 z-[var(--z-popover)]">
-                <div className="flex items-center justify-between pb-2 border-b border-[var(--border-hairline)] mb-2">
-                  <span className="text-xs font-semibold text-[var(--text-muted)] uppercase">
-                    Select Destination
-                  </span>
-                  <button onClick={() => setDestOpen(false)} className="text-[var(--text-muted)] p-1">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder="Type city or IATA (e.g. BOM)"
-                  value={destQuery}
-                  onChange={(e) => setDestQuery(e.target.value)}
-                  className="w-full text-xs p-2 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-hairline)] mb-2 outline-none focus:border-[var(--accent-primary)]"
-                />
-                <div className="max-h-52 overflow-y-auto space-y-1">
-                  {filteredDestAirports.map((a) => (
-                    <button
-                      key={a.code}
-                      type="button"
-                      onClick={() => {
-                        onDestinationChange(a);
-                        setDestOpen(false);
-                      }}
-                      className="w-full text-left p-2 rounded-lg text-xs hover:bg-[var(--accent-soft)] flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-semibold text-[var(--text-primary)]">{a.city}</div>
-                        <div className="text-[10px] text-[var(--text-muted)]">{a.name}</div>
-                      </div>
-                      <span className="font-mono font-bold text-xs bg-[var(--bg-subtle)] px-2 py-0.5 rounded">
-                        {a.code}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Date & Travelers (3 cols) */}
-          <div className="md:col-span-3 grid grid-cols-2 gap-2">
-            {/* Departure Date */}
-            <div className="p-3 rounded-[var(--radius-control)] border border-[var(--border-hairline)] bg-white">
-              <span className="block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                Departure
+          {/* Dates */}
+          <div className={`grid gap-2 md:col-span-4 ${isRoundTrip ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <label className="field block cursor-pointer px-4 py-3">
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                Depart
               </span>
               <input
                 type="date"
+                required
                 value={departureDate}
-                onChange={(e) => onDepartureDateChange(e.target.value)}
-                className="w-full mt-1 text-xs font-semibold text-[var(--text-primary)] bg-transparent outline-none cursor-pointer"
+                min={minDate}
+                onChange={(e) => handleDepartureChange(e.target.value)}
+                className="mt-1.5 w-full cursor-pointer bg-transparent text-sm font-semibold text-[var(--text-primary)] outline-none"
               />
-            </div>
+            </label>
+            {isRoundTrip && (
+              <label className="field block animate-pop-in cursor-pointer px-4 py-3" aria-invalid={returnInvalid}>
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                  Return
+                </span>
+                <input
+                  type="date"
+                  value={returnDate ?? ''}
+                  min={departureDate || minDate}
+                  onChange={(e) => onReturnDateChange(e.target.value || undefined)}
+                  aria-invalid={returnInvalid}
+                  aria-describedby={returnInvalid ? 'return-error' : undefined}
+                  className="mt-1.5 w-full cursor-pointer bg-transparent text-sm font-semibold text-[var(--text-primary)] outline-none"
+                />
+              </label>
+            )}
+          </div>
 
-            {/* Travelers & Cabin Trigger */}
-            <div
-              onClick={() => setPassengersOpen(!passengersOpen)}
-              className="p-3 rounded-[var(--radius-control)] border border-[var(--border-hairline)] bg-white cursor-pointer relative"
+          {/* Travellers & cabin */}
+          <div ref={travellersRef} className="relative md:col-span-2">
+            <button
+              type="button"
+              onClick={() => setTravellersOpen((v) => !v)}
+              aria-haspopup="dialog"
+              aria-expanded={travellersOpen}
+              data-open={travellersOpen}
+              className="field h-full w-full px-4 py-3 text-left"
             >
-              <span className="block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                Travelers
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                Travellers
               </span>
-              <div className="text-xs font-semibold text-[var(--text-primary)] mt-1 truncate">
-                {totalPassengers} {totalPassengers === 1 ? 'Adult' : 'Pax'}
-              </div>
-              <div className="text-[10px] text-[var(--text-muted)] truncate">{cabinClass}</div>
+              <span className="mt-1.5 block truncate text-sm font-semibold text-[var(--text-primary)]">
+                {travellerSummary(passengers)}
+              </span>
+              <span className="block truncate text-xs text-[var(--text-muted)]">{cabinClass}</span>
+            </button>
 
-              {/* Passengers Drawer / Popover */}
-              {passengersOpen && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute top-full right-0 mt-2 w-64 bg-white rounded-[var(--radius-control)] shadow-2xl border border-[var(--border-hairline)] p-4 z-[var(--z-popover)] animate-in fade-in zoom-in-95"
-                >
-                  <div className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider mb-3 pb-2 border-b border-[var(--border-hairline)]">
-                    Travelers & Cabin
+            {travellersOpen && (
+              <div
+                role="dialog"
+                aria-label="Travellers and cabin"
+                className="absolute right-0 top-[calc(100%+8px)] w-[min(20rem,calc(100vw-2rem))] origin-top-right animate-pop-in glass glass-strong rounded-[var(--radius-card)] p-4"
+                style={{ zIndex: 'var(--z-popover)' }}
+              >
+                <div className="divide-y divide-[var(--border-hairline)]">
+                  <Stepper
+                    label="Adults"
+                    hint="12+ years"
+                    value={passengers.adults}
+                    min={1}
+                    max={MAX_TRAVELLERS - passengers.children - passengers.infants}
+                    onChange={(adults) =>
+                      onPassengersChange({
+                        ...passengers,
+                        adults,
+                        // Each infant must travel on an adult's lap
+                        infants: Math.min(passengers.infants, adults),
+                      })
+                    }
+                  />
+                  <Stepper
+                    label="Children"
+                    hint="2–11 years"
+                    value={passengers.children}
+                    min={0}
+                    max={MAX_TRAVELLERS - passengers.adults - passengers.infants}
+                    onChange={(children) => onPassengersChange({ ...passengers, children })}
+                  />
+                  <Stepper
+                    label="Infants"
+                    hint="Under 2, on lap"
+                    value={passengers.infants}
+                    min={0}
+                    max={Math.min(passengers.adults, MAX_TRAVELLERS - passengers.adults - passengers.children)}
+                    onChange={(infants) => onPassengersChange({ ...passengers, infants })}
+                  />
+                </div>
+                {total >= MAX_TRAVELLERS && (
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">Up to 9 travellers per booking.</p>
+                )}
+
+                <div className="mt-3 border-t border-[var(--border-hairline)] pt-3">
+                  <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    Cabin
                   </div>
-
-                  {/* Adults */}
-                  <div className="flex items-center justify-between py-1.5 text-xs">
-                    <div>
-                      <span className="font-semibold text-[var(--text-primary)]">Adults</span>
-                      <span className="block text-[10px] text-[var(--text-muted)]">Age 12+</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={passengers.adults <= 1}
-                        onClick={() =>
-                          onPassengersChange({ ...passengers, adults: Math.max(1, passengers.adults - 1) })
-                        }
-                        className="w-6 h-6 rounded-full border border-[var(--border-hairline)] font-bold disabled:opacity-30"
-                      >
-                        -
-                      </button>
-                      <span className="tabular-nums font-semibold w-4 text-center">
-                        {passengers.adults}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={passengers.adults >= 9}
-                        onClick={() =>
-                          onPassengersChange({ ...passengers, adults: passengers.adults + 1 })
-                        }
-                        className="w-6 h-6 rounded-full border border-[var(--border-hairline)] font-bold"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Cabin Class Selection */}
-                  <div className="mt-3 pt-2 border-t border-[var(--border-hairline)]">
-                    <span className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">
-                      Cabin Class
-                    </span>
-                    {(['Economy', 'Premium Economy', 'Business'] as CabinClass[]).map((c) => (
+                  <div role="radiogroup" aria-label="Cabin class" className="space-y-1">
+                    {CABINS.map((c) => (
                       <button
                         key={c}
                         type="button"
-                        onClick={() => {
-                          onCabinClassChange(c);
-                          setPassengersOpen(false);
-                        }}
-                        className={`w-full text-left text-xs py-1.5 px-2 rounded-lg flex items-center justify-between ${
+                        role="radio"
+                        aria-checked={cabinClass === c}
+                        onClick={() => onCabinClassChange(c)}
+                        className={`flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-sm transition-colors ${
                           cabinClass === c
-                            ? 'bg-[var(--accent-soft)] text-[var(--accent-primary)] font-semibold'
+                            ? 'bg-[var(--accent-soft)] font-medium text-[var(--accent-primary)]'
                             : 'text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'
                         }`}
                       >
-                        <span>{c}</span>
-                        {cabinClass === c && <Check className="w-3.5 h-3.5 text-[var(--accent-primary)]" />}
+                        {c}
+                        {cabinClass === c && <Check className="h-4 w-4" />}
                       </button>
                     ))}
                   </div>
                 </div>
-              )}
-            </div>
+
+                <button
+                  type="button"
+                  onClick={() => setTravellersOpen(false)}
+                  className="btn btn-primary mt-4 h-10 w-full text-sm"
+                >
+                  Done
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Search Action CTA with Magnetic Spring Behavior */}
-        <div className="mt-6 flex justify-center">
+        <div className="mt-4 flex flex-col-reverse items-center justify-between gap-3 px-1 sm:flex-row">
+          <p id="return-error" role={returnInvalid ? 'alert' : undefined} className="text-xs text-[var(--text-muted)]">
+            {returnInvalid ? (
+              <span className="text-[var(--semantic-danger)]">Return date must be on or after departure.</span>
+            ) : (
+              <>Prices include mandatory taxes. Seller fees shown before you leave FairFare.</>
+            )}
+          </p>
           <button
-            type="button"
-            onClick={onSearch}
-            className="magnetic-btn px-10 py-3.5 rounded-[var(--radius-pill)] bg-[var(--text-primary)] hover:bg-[var(--accent-primary)] text-white font-semibold text-sm tracking-wide shadow-md hover:shadow-lg transition-all touch-target"
+            type="submit"
+            disabled={isSearching || returnInvalid}
+            aria-busy={isSearching}
+            className="btn btn-primary h-12 w-full px-8 text-sm sm:w-auto"
           >
-            Search Flights
+            {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            {isSearching ? 'Searching sellers…' : 'Search flights'}
           </button>
         </div>
-      </div>
+      </form>
 
-      {/* 1px Sentinel Element Observed by IntersectionObserver */}
-      <div ref={sentinelRef} className="h-[1px] w-full" aria-hidden="true" />
+      {/* Observed by the page to reveal the compact sticky summary */}
+      <div ref={sentinelRef} className="h-px w-full" aria-hidden="true" />
     </div>
   );
 }

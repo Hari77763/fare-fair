@@ -7,8 +7,14 @@ import { Footer } from "@/components/footer";
 import { FlightCard } from "@/components/flights/flight-card";
 import { FlightFilters } from "@/components/flights/flight-filters";
 import { mockFlights, mockAirports } from "@/lib/mock-data";
-import { Sparkles, ShieldCheck, ArrowRight, RefreshCw, AlertCircle, SlidersHorizontal } from "lucide-react";
+import { Sparkles, ShieldCheck, CheckCircle2, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
+import { formatDate } from "@/lib/utils";
+
+const TRUST_THRESHOLD = 0.85;
+
+// Distinct sellers represented in the result set
+const supplierCount = new Set(mockFlights.flatMap((f) => f.offers.map((o) => o.supplierId))).size;
 
 function SearchResultsContent() {
   const searchParams = useSearchParams();
@@ -51,10 +57,12 @@ function SearchResultsContent() {
 
       return true;
     }).sort((a, b) => {
-      if (rankingMode === "trusted") {
-        return a.cheapestTrustedPaise - b.cheapestTrustedPaise;
-      }
-      return a.cheapestPaise - b.cheapestPaise;
+      // Derived from the offers themselves so ranking always matches the cards
+      const price = (f: typeof a) => {
+        const offers = rankingMode === "trusted" ? f.offers.filter((o) => o.trustScore >= TRUST_THRESHOLD) : f.offers;
+        return offers.length ? Math.min(...offers.map((o) => o.totalPaise)) : Number.POSITIVE_INFINITY;
+      };
+      return price(a) - price(b);
     });
   }, [maxPrice, selectedStops, selectedAirlines, rankingMode]);
 
@@ -65,61 +73,53 @@ function SearchResultsContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
 
       {/* Top Route Summary Bar */}
-      <section className="bg-white border-b border-slate-200/80 py-6 px-4 sm:px-8">
+      <section className="glass-bar py-6 px-4 sm:px-8">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-xl sm:text-2xl font-extrabold text-navy">{originAirport.city}</span>
+              <span className="text-xl sm:text-2xl font-semibold tracking-tight text-navy">{originAirport.city}</span>
               <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                 {originAirport.code}
               </span>
               <span className="text-slate-300 mx-1">→</span>
-              <span className="text-xl sm:text-2xl font-extrabold text-navy">{destAirport.city}</span>
+              <span className="text-xl sm:text-2xl font-semibold tracking-tight text-navy">{destAirport.city}</span>
               <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                 {destAirport.code}
               </span>
             </div>
             <span className="hidden sm:inline text-slate-300">|</span>
             <span className="hidden sm:inline text-xs font-semibold text-slate-600">
-              {new Date(departureDate).toLocaleDateString("en-IN", {
-                weekday: "short",
-                day: "numeric",
-                month: "short",
-              })}{" "}
-              · {adults} Traveler(s)
+              {formatDate(departureDate)} · {adults} traveller{adults === 1 ? "" : "s"}
             </span>
           </div>
 
-          <Link
-            href="/"
-            className="text-xs font-bold text-amber-600 hover:text-amber-700 underline self-start sm:self-auto"
-          >
-            Modify Search
+          <Link href="/" className="btn btn-secondary h-9 px-4 text-xs self-start sm:self-auto">
+            Modify search
           </Link>
         </div>
       </section>
 
-      {/* Metasearch Supplier Progress Bar */}
-      <div className="bg-amber-50/80 border-b border-amber-200/60 py-2.5 px-4 sm:px-8 text-xs text-amber-900">
+      {/* Metasearch status bar */}
+      <div className="bg-blue-50/80 border-b border-blue-200/60 py-2.5 px-4 sm:px-8 text-xs text-blue-900">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <RefreshCw className="w-3.5 h-3.5 text-amber-600 animate-spin" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
             <span>
-              Live metasearch completed: <strong>8 suppliers queried</strong> (Cleartrip, MakeMyTrip, EaseMyTrip, ixigo, Google Flights, Yatra)
+              Search complete across <strong>{supplierCount} booking sources</strong> · demo data
             </span>
           </div>
           <span className="font-semibold text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-full text-[11px]">
-            Zero FareFair Platform Fees
+            Zero FairFare Platform Fees
           </span>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 flex-1 w-full">
+      <main id="main" className="max-w-7xl mx-auto px-4 sm:px-8 py-8 flex-1 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Desktop Filters Sidebar (3 cols) */}
           <aside className="hidden lg:block lg:col-span-3 sticky top-6">
@@ -137,7 +137,7 @@ function SearchResultsContent() {
           {/* Results Area (9 cols) */}
           <section className="lg:col-span-9 space-y-5">
             {/* Two Signature Ranking Tabs */}
-            <div className="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-3">
+            <div className="glass-card p-2 rounded-2xl flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
@@ -148,7 +148,7 @@ function SearchResultsContent() {
                       : "text-slate-600 hover:bg-slate-100"
                   }`}
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
                   <span>Absolute Cheapest</span>
                 </button>
 
@@ -178,7 +178,7 @@ function SearchResultsContent() {
 
             {/* Mobile Filter Drawer */}
             {mobileFiltersOpen && (
-              <div className="lg:hidden p-4 bg-white rounded-3xl border border-slate-200 shadow-xl mb-4">
+              <div className="lg:hidden p-4 glass-card rounded-2xl mb-4">
                 <FlightFilters
                   maxPrice={maxPrice}
                   onPriceChange={setMaxPrice}
@@ -199,7 +199,7 @@ function SearchResultsContent() {
 
             {/* Flights List */}
             {filteredFlights.length === 0 ? (
-              <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-4">
+              <div className="glass-card rounded-2xl p-12 text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400 text-2xl">
                   ✈
                 </div>
@@ -209,7 +209,7 @@ function SearchResultsContent() {
                 </p>
                 <button
                   onClick={handleResetFilters}
-                  className="px-5 py-2 rounded-full bg-navy text-white text-xs font-bold hover:bg-navy-light"
+                  className="px-5 py-2 rounded-full bg-navy text-white text-xs font-bold hover:bg-blue-700"
                 >
                   Reset All Filters
                 </button>

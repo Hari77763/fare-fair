@@ -46,7 +46,9 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # Security & JWT Tokens
-    JWT_SECRET_KEY: str = "fairfare-super-secret-key-change-in-production-2026-xyz123"
+    # No hard-coded default: an empty value gets a random per-process key in
+    # development (tokens reset on restart) and is a startup error in production.
+    JWT_SECRET_KEY: str = ""
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -88,5 +90,19 @@ class Settings(BaseSettings):
     )
 
 
+def _ensure_jwt_secret(cfg: "Settings") -> None:
+    """Refuse weak secrets in production; generate an ephemeral one in dev."""
+    import secrets as _secrets
+
+    if cfg.JWT_SECRET_KEY:
+        if cfg.ENV == "production" and len(cfg.JWT_SECRET_KEY) < 32:
+            raise RuntimeError("JWT_SECRET_KEY must be at least 32 characters in production")
+        return
+    if cfg.ENV == "production":
+        raise RuntimeError("JWT_SECRET_KEY must be set in production")
+    cfg.JWT_SECRET_KEY = _secrets.token_urlsafe(48)
+
+
 # Global singleton settings instance
 settings = Settings()
+_ensure_jwt_secret(settings)

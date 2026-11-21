@@ -1,6 +1,6 @@
-# FareFair Developer State & Project Notes
+# FairFare Developer State & Project Notes
 **Generated:** 2026-11-21  
-**Project:** FareFair — India-First Flight Metasearch Engine
+**Project:** FairFare — India-First Flight Metasearch Engine
 
 ---
 
