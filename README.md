@@ -87,6 +87,8 @@ cd frontend && npm run lint && npm run typecheck && npm run build
 
 ## Deployment (Vercel)
 
+**Live:** https://fairfare-neon.vercel.app — every push to `main` of [sofiyandev56-spec/fairfare](https://github.com/sofiyandev56-spec/fairfare) deploys automatically.
+
 The deployable web app is the Next.js project in `frontend/`.
 
 - **Root Directory:** `frontend`
