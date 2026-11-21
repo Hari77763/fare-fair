@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { CurrencyCode } from '../types/flight';
-import { Bookmark, Globe } from 'lucide-react';
+import { Bookmark } from 'lucide-react';
 
 interface NavigationProps {
   currency: CurrencyCode;
@@ -11,51 +11,99 @@ interface NavigationProps {
 }
 
 export function Navigation({ currency, onCurrencyChange, savedCount }: NavigationProps) {
+  const [activeTab, setActiveTab] = useState<'flights' | 'compare' | 'alerts' | 'how' | 'about'>('flights');
+
   return (
-    <nav
-      className="w-full h-16 border-b border-[var(--border-hairline)] bg-[var(--bg-elevated)] backdrop-blur-md sticky top-0 z-[var(--z-sticky-header)] transition-colors"
-      style={{ zIndex: 'var(--z-sticky-header)' }}
-    >
+    <header className="w-full h-16 sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/70 transition-all">
       <div className="max-w-[1200px] h-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-        {/* Geometric Aviation Mark + Wordmark */}
+        {/* Brand: Black Squircle Delta Icon + FairFare Wordmark */}
         <div className="flex items-center gap-3 select-none">
-          <div className="w-9 h-9 rounded-xl bg-[var(--text-primary)] text-white flex items-center justify-center shadow-sm">
+          <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
             <svg
-              className="w-5 h-5 text-[var(--semantic-success)]"
+              className="w-4 h-4 text-white fill-current"
               viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
             >
-              {/* Clean Swiss-style minimalist delta plane */}
-              <path d="M12 2L2 19l10-4 10 4L12 2z" />
+              {/* Delta wing mark */}
+              <path d="M12 3L3 20l9-4 9 4L12 3z" />
             </svg>
           </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-semibold text-xl tracking-tight text-[var(--text-primary)]">
-              Fare<span className="text-[var(--accent-primary)] font-bold">Fair</span>
-            </span>
-            <span className="hidden sm:inline-block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-l border-[var(--border-hairline)] pl-2 ml-1">
-              Metasearch
-            </span>
-          </div>
+          <span className="font-bold text-lg tracking-tight text-slate-900">
+            FairFare
+          </span>
         </div>
 
+        {/* Center Navigation Links (Hidden on small mobile) */}
+        <nav className="hidden md:flex items-center gap-1 bg-slate-100/60 p-1 rounded-full border border-slate-200/60 text-xs font-medium">
+          <button
+            type="button"
+            onClick={() => setActiveTab('flights')}
+            className={`px-4 py-1.5 rounded-full transition-all ${
+              activeTab === 'flights'
+                ? 'bg-white text-slate-900 font-semibold shadow-xs border border-slate-200/70'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            Flights
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('compare')}
+            className={`px-3.5 py-1.5 rounded-full transition-all ${
+              activeTab === 'compare'
+                ? 'bg-white text-slate-900 font-semibold shadow-xs border border-slate-200/70'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            Compare sellers
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('alerts')}
+            className={`px-3.5 py-1.5 rounded-full transition-all ${
+              activeTab === 'alerts'
+                ? 'bg-white text-slate-900 font-semibold shadow-xs border border-slate-200/70'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            Price alerts
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('how')}
+            className={`px-3.5 py-1.5 rounded-full transition-all ${
+              activeTab === 'how'
+                ? 'bg-white text-slate-900 font-semibold shadow-xs border border-slate-200/70'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            How it works
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('about')}
+            className={`px-3.5 py-1.5 rounded-full transition-all ${
+              activeTab === 'about'
+                ? 'bg-white text-slate-900 font-semibold shadow-xs border border-slate-200/70'
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            About
+          </button>
+        </nav>
+
         {/* Right Controls: Live Currency Switcher & Saved Pill */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {/* Currency Switcher */}
-          <div className="relative inline-flex items-center bg-[var(--bg-subtle)] p-1 rounded-full border border-[var(--border-hairline)] text-xs font-semibold">
+          <div className="inline-flex items-center bg-slate-100/70 p-0.5 rounded-full border border-slate-200/60 text-xs font-medium">
             {(['INR', 'USD', 'EUR'] as CurrencyCode[]).map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => onCurrencyChange(c)}
-                className={`px-2.5 py-1 rounded-full transition-all tabular-nums touch-target ${
+                className={`px-2.5 py-1 rounded-full transition-all tabular-nums ${
                   currency === c
-                    ? 'bg-white text-[var(--accent-primary)] shadow-sm'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                    ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 {c === 'INR' ? '₹ INR' : c === 'USD' ? '$ USD' : '€ EUR'}
@@ -66,19 +114,14 @@ export function Navigation({ currency, onCurrencyChange, savedCount }: Navigatio
           {/* Saved Flights Pill */}
           <button
             type="button"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-surface)] hover:bg-[var(--bg-subtle)] text-xs font-semibold text-[var(--text-secondary)] transition-colors touch-target"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200/80 bg-white/80 hover:bg-white text-xs font-medium text-slate-700 shadow-xs transition-colors"
             aria-label={`Saved flights: ${savedCount}`}
           >
-            <Bookmark className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            <span className="hidden sm:inline">Saved</span>
-            {savedCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-[var(--accent-primary)] text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
-                {savedCount}
-              </span>
-            )}
+            <Bookmark className="w-3.5 h-3.5 text-slate-400" />
+            <span>Saved {savedCount}</span>
           </button>
         </div>
       </div>
-    </nav>
+    </header>
   );
 }

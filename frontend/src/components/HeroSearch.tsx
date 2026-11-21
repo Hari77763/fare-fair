@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Airport, TripType, CabinClass } from '../types/flight';
 import { majorAirports } from '../data/mockFlights';
-import { ArrowLeftRight, Calendar, Users, MapPin, ChevronDown, Check, X } from 'lucide-react';
+import { ArrowLeftRight, Calendar, Search, X, Check } from 'lucide-react';
 
 interface HeroSearchProps {
   tripType: TripType;
@@ -21,8 +21,8 @@ interface HeroSearchProps {
   cabinClass: CabinClass;
   onCabinClassChange: (c: CabinClass) => void;
   onSearch: () => void;
-  sentinelRef: React.RefObject<HTMLDivElement | null>;
-  originInputRef?: React.RefObject<HTMLInputElement | null>;
+  sentinelRef: React.Ref<HTMLDivElement>;
+  originInputRef?: React.Ref<HTMLInputElement>;
 }
 
 export function HeroSearch({
@@ -52,8 +52,30 @@ export function HeroSearch({
   const [destQuery, setDestQuery] = useState('');
   const [isSwapping, setIsSwapping] = useState(false);
 
+  const originContainerRef = useRef<HTMLDivElement>(null);
+  const destContainerRef = useRef<HTMLDivElement>(null);
+  const passengersContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close popovers on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (originContainerRef.current && !originContainerRef.current.contains(event.target as Node)) {
+        setOriginOpen(false);
+      }
+      if (destContainerRef.current && !destContainerRef.current.contains(event.target as Node)) {
+        setDestOpen(false);
+      }
+      if (passengersContainerRef.current && !passengersContainerRef.current.contains(event.target as Node)) {
+        setPassengersOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Swap animation trigger
-  const handleSwap = () => {
+  const handleSwap = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsSwapping(true);
     const temp = origin;
     onOriginChange(destination);
@@ -79,242 +101,316 @@ export function HeroSearch({
 
   const totalPassengers = passengers.adults + passengers.children + passengers.infants;
 
+  // Format ISO date (YYYY-MM-DD) to MM/DD/YYYY for visual fidelity
+  const formatDisplayDate = (isoStr: string) => {
+    if (!isoStr) return '';
+    const parts = isoStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[1]}/${parts[2]}/${parts[0]}`;
+    }
+    return isoStr;
+  };
+
   return (
-    <div className="w-full max-w-[1200px] mx-auto pt-8 sm:pt-14 pb-8 px-4 sm:px-6 lg:px-8">
-      {/* Editorial Headline */}
-      <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10 select-none">
-        <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight text-[var(--text-primary)] leading-[1.12]">
-          Pure aviation metasearch.
+    <div className="w-full max-w-[1140px] mx-auto pt-10 pb-6 px-4 sm:px-6 lg:px-8">
+      {/* 1. Pill Badge */}
+      <div className="flex justify-center mb-4">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/80 border border-slate-200/80 shadow-xs text-xs text-slate-600 font-medium select-none">
+          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span>Independent · Zero FairFare markup</span>
+        </div>
+      </div>
+
+      {/* 2. Main Title & Subtitle */}
+      <div className="text-center max-w-2xl mx-auto mb-8 select-none">
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 leading-tight">
+          Pure aviation <span className="text-[#1D4ED8]">metasearch.</span>
         </h1>
-        <p className="text-[var(--text-secondary)] text-sm sm:text-base mt-3 font-normal leading-relaxed">
-          Zero hidden checkout fees. Dual price rankings across all certified carriers.
+        <p className="text-slate-500 text-sm sm:text-[15px] mt-3 font-normal leading-relaxed">
+          Every fare itemised, every seller ranked twice — cheapest overall<br className="hidden sm:inline" />
+          and cheapest you can trust.
         </p>
       </div>
 
-      {/* Main Unified Search Card */}
-      <div className="bg-[var(--bg-surface)] rounded-[var(--radius-card)] border border-[var(--border-hairline)] shadow-[var(--shadow-card)] p-4 sm:p-6 lg:p-7 relative z-[var(--z-base)]">
-        {/* Trip Type Segmented Control with animated sliding pill */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-[var(--border-hairline)]">
-          <div className="inline-flex items-center bg-[var(--bg-subtle)] p-1 rounded-full border border-[var(--border-hairline)] text-xs font-semibold">
-            {(['round-trip', 'one-way', 'multi-city'] as TripType[]).map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => onTripTypeChange(type)}
-                className={`px-4 py-1.5 rounded-full capitalize transition-all touch-target ${
-                  tripType === type
-                    ? 'bg-white text-[var(--accent-primary)] shadow-sm'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                {type.replace('-', ' ')}
-              </button>
-            ))}
-          </div>
-
-          <div className="text-xs font-medium text-[var(--text-muted)] flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[var(--semantic-success)]"></span>
-            <span>Real-time GDS & NDC Availability</span>
-          </div>
-        </div>
-
-        {/* Inputs Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-          {/* Origin Combobox (4 cols) */}
-          <div className="md:col-span-4 relative">
-            <div
-              onClick={() => {
-                setOriginOpen(true);
-                setDestOpen(false);
-              }}
-              className="p-3.5 rounded-[var(--radius-control)] border border-[var(--border-hairline)] hover:border-[var(--border-strong)] bg-white cursor-pointer transition-colors"
-            >
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                From
-              </div>
-              <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-xl sm:text-2xl font-semibold text-[var(--text-primary)]">
-                  {origin.city}
-                </span>
-                <span className="text-xs font-bold font-mono px-1.5 py-0.5 bg-[var(--bg-subtle)] text-[var(--text-secondary)] rounded">
-                  {origin.code}
-                </span>
-              </div>
-              <div className="text-xs text-[var(--text-secondary)] truncate mt-0.5">{origin.name}</div>
-            </div>
-
-            {/* Origin Popover */}
-            {originOpen && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-[var(--radius-control)] shadow-xl border border-[var(--border-hairline)] p-3 z-[var(--z-popover)]">
-                <div className="flex items-center justify-between pb-2 border-b border-[var(--border-hairline)] mb-2">
-                  <span className="text-xs font-semibold text-[var(--text-muted)] uppercase">
-                    Select Origin
-                  </span>
-                  <button onClick={() => setOriginOpen(false)} className="text-[var(--text-muted)] p-1">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  autoFocus
-                  ref={originInputRef}
-                  placeholder="Type city or IATA (e.g. DEL)"
-                  value={originQuery}
-                  onChange={(e) => setOriginQuery(e.target.value)}
-                  className="w-full text-xs p-2 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-hairline)] mb-2 outline-none focus:border-[var(--accent-primary)]"
-                />
-                <div className="max-h-52 overflow-y-auto space-y-1">
-                  {filteredOriginAirports.map((a) => (
-                    <button
-                      key={a.code}
-                      type="button"
-                      onClick={() => {
-                        onOriginChange(a);
-                        setOriginOpen(false);
-                      }}
-                      className="w-full text-left p-2 rounded-lg text-xs hover:bg-[var(--accent-soft)] flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-semibold text-[var(--text-primary)]">{a.city}</div>
-                        <div className="text-[10px] text-[var(--text-muted)]">{a.name}</div>
-                      </div>
-                      <span className="font-mono font-bold text-xs bg-[var(--bg-subtle)] px-2 py-0.5 rounded">
-                        {a.code}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Swap Button (1 col or centered micro-button) */}
-          <div className="md:col-span-1 flex justify-center -my-2 md:my-0">
+      {/* 3. Main Search Card */}
+      <div className="bg-white/95 backdrop-blur-md rounded-[28px] border border-slate-200/90 shadow-xl shadow-slate-200/50 p-5 sm:p-7 relative z-10">
+        {/* Top Controls: Trip Type Pill & Demo Tag */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+          <div className="inline-flex items-center bg-slate-100/80 p-1 rounded-full border border-slate-200/60 text-xs font-medium">
             <button
               type="button"
-              onClick={handleSwap}
-              className={`w-10 h-10 rounded-full border border-[var(--border-hairline)] bg-[var(--bg-surface)] hover:bg-[var(--bg-subtle)] shadow-sm flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--accent-primary)] transition-transform touch-target ${
-                isSwapping ? 'rotate-180' : ''
+              onClick={() => onTripTypeChange('round-trip')}
+              className={`px-4 py-1.5 rounded-full transition-all ${
+                tripType === 'round-trip'
+                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
-              style={{ transitionDuration: '240ms', transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)' }}
-              aria-label="Swap origin and destination"
             >
-              <ArrowLeftRight className="w-4 h-4" />
+              Round trip
+            </button>
+            <button
+              type="button"
+              onClick={() => onTripTypeChange('one-way')}
+              className={`px-4 py-1.5 rounded-full transition-all ${
+                tripType === 'one-way'
+                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              One way
+            </button>
+            <button
+              type="button"
+              onClick={() => onTripTypeChange('multi-city')}
+              className={`px-4 py-1.5 rounded-full transition-all ${
+                tripType === 'multi-city'
+                  ? 'bg-white text-slate-900 font-semibold shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Multi-city
             </button>
           </div>
 
-          {/* Destination Combobox (4 cols) */}
-          <div className="md:col-span-4 relative">
-            <div
-              onClick={() => {
-                setDestOpen(true);
-                setOriginOpen(false);
-              }}
-              className="p-3.5 rounded-[var(--radius-control)] border border-[var(--border-hairline)] hover:border-[var(--border-strong)] bg-white cursor-pointer transition-colors"
-            >
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                To
+          <div className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>GDS & NDC availability (demo)</span>
+          </div>
+        </div>
+
+        {/* Inputs Layout: Horizontal Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
+          {/* FROM & TO with Swap (6 cols on lg) */}
+          <div className="lg:col-span-6 flex items-center gap-2 w-full">
+            {/* Origin Combobox */}
+            <div ref={originContainerRef} className="flex-1 relative">
+              <div
+                onClick={() => {
+                  setOriginOpen(true);
+                  setDestOpen(false);
+                }}
+                className="p-3.5 rounded-2xl border border-slate-200/90 hover:border-slate-300 bg-white cursor-pointer transition-all shadow-xs h-[78px] flex flex-col justify-between"
+              >
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  FROM
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg font-bold text-slate-900">
+                    {origin.city}
+                  </span>
+                  <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
+                    {origin.code}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-400 truncate">
+                  {origin.name}
+                </div>
               </div>
-              <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-xl sm:text-2xl font-semibold text-[var(--text-primary)]">
-                  {destination.city}
-                </span>
-                <span className="text-xs font-bold font-mono px-1.5 py-0.5 bg-[var(--bg-subtle)] text-[var(--text-secondary)] rounded">
-                  {destination.code}
-                </span>
-              </div>
-              <div className="text-xs text-[var(--text-secondary)] truncate mt-0.5">
-                {destination.name}
-              </div>
+
+              {/* Origin Popover */}
+              {originOpen && (
+                <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in zoom-in-95">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Select Origin
+                    </span>
+                    <button onClick={() => setOriginOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    autoFocus
+                    ref={originInputRef}
+                    placeholder="Search city or airport code..."
+                    value={originQuery}
+                    onChange={(e) => setOriginQuery(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 mb-2 outline-none focus:border-blue-500 focus:bg-white"
+                  />
+                  <div className="max-h-52 overflow-y-auto space-y-1">
+                    {filteredOriginAirports.map((a) => (
+                      <button
+                        key={a.code}
+                        type="button"
+                        onClick={() => {
+                          onOriginChange(a);
+                          setOriginOpen(false);
+                        }}
+                        className="w-full text-left p-2 rounded-xl text-xs hover:bg-slate-50 flex items-center justify-between transition-colors"
+                      >
+                        <div>
+                          <div className="font-semibold text-slate-900">{a.city}</div>
+                          <div className="text-[10px] text-slate-400">{a.name}</div>
+                        </div>
+                        <span className="font-mono font-bold text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
+                          {a.code}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Destination Popover */}
-            {destOpen && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-[var(--radius-control)] shadow-xl border border-[var(--border-hairline)] p-3 z-[var(--z-popover)]">
-                <div className="flex items-center justify-between pb-2 border-b border-[var(--border-hairline)] mb-2">
-                  <span className="text-xs font-semibold text-[var(--text-muted)] uppercase">
-                    Select Destination
-                  </span>
-                  <button onClick={() => setDestOpen(false)} className="text-[var(--text-muted)] p-1">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+            {/* Swap Button */}
+            <button
+              type="button"
+              onClick={handleSwap}
+              className={`w-9 h-9 rounded-full border border-slate-200 bg-white hover:bg-slate-50 shadow-xs flex items-center justify-center text-slate-400 hover:text-slate-700 transition-transform shrink-0 ${
+                isSwapping ? 'rotate-180' : ''
+              }`}
+              style={{ transitionDuration: '240ms' }}
+              aria-label="Swap origin and destination"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Destination Combobox */}
+            <div ref={destContainerRef} className="flex-1 relative">
+              <div
+                onClick={() => {
+                  setDestOpen(true);
+                  setOriginOpen(false);
+                }}
+                className="p-3.5 rounded-2xl border border-slate-200/90 hover:border-slate-300 bg-white cursor-pointer transition-all shadow-xs h-[78px] flex flex-col justify-between"
+              >
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  TO
                 </div>
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder="Type city or IATA (e.g. BOM)"
-                  value={destQuery}
-                  onChange={(e) => setDestQuery(e.target.value)}
-                  className="w-full text-xs p-2 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-hairline)] mb-2 outline-none focus:border-[var(--accent-primary)]"
-                />
-                <div className="max-h-52 overflow-y-auto space-y-1">
-                  {filteredDestAirports.map((a) => (
-                    <button
-                      key={a.code}
-                      type="button"
-                      onClick={() => {
-                        onDestinationChange(a);
-                        setDestOpen(false);
-                      }}
-                      className="w-full text-left p-2 rounded-lg text-xs hover:bg-[var(--accent-soft)] flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-semibold text-[var(--text-primary)]">{a.city}</div>
-                        <div className="text-[10px] text-[var(--text-muted)]">{a.name}</div>
-                      </div>
-                      <span className="font-mono font-bold text-xs bg-[var(--bg-subtle)] px-2 py-0.5 rounded">
-                        {a.code}
-                      </span>
-                    </button>
-                  ))}
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg font-bold text-slate-900">
+                    {destination.city}
+                  </span>
+                  <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
+                    {destination.code}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-400 truncate">
+                  {destination.name}
                 </div>
               </div>
-            )}
+
+              {/* Destination Popover */}
+              {destOpen && (
+                <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in zoom-in-95">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Select Destination
+                    </span>
+                    <button onClick={() => setDestOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Search city or airport code..."
+                    value={destQuery}
+                    onChange={(e) => setDestQuery(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 mb-2 outline-none focus:border-blue-500 focus:bg-white"
+                  />
+                  <div className="max-h-52 overflow-y-auto space-y-1">
+                    {filteredDestAirports.map((a) => (
+                      <button
+                        key={a.code}
+                        type="button"
+                        onClick={() => {
+                          onDestinationChange(a);
+                          setDestOpen(false);
+                        }}
+                        className="w-full text-left p-2 rounded-xl text-xs hover:bg-slate-50 flex items-center justify-between transition-colors"
+                      >
+                        <div>
+                          <div className="font-semibold text-slate-900">{a.city}</div>
+                          <div className="text-[10px] text-slate-400">{a.name}</div>
+                        </div>
+                        <span className="font-mono font-bold text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
+                          {a.code}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Date & Travelers (3 cols) */}
-          <div className="md:col-span-3 grid grid-cols-2 gap-2">
-            {/* Departure Date */}
-            <div className="p-3 rounded-[var(--radius-control)] border border-[var(--border-hairline)] bg-white">
-              <span className="block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                Departure
+          {/* DEPART, RETURN & TRAVELLERS (6 cols on lg) */}
+          <div className="lg:col-span-6 grid grid-cols-3 gap-2.5 w-full">
+            {/* Depart Box */}
+            <div className="p-3.5 rounded-2xl border border-slate-200/90 hover:border-slate-300 bg-white shadow-xs h-[78px] flex flex-col justify-between relative">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                DEPART
               </span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-slate-800 tabular-nums">
+                  {formatDisplayDate(departureDate)}
+                </span>
+                <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+              </div>
               <input
                 type="date"
                 value={departureDate}
                 onChange={(e) => onDepartureDateChange(e.target.value)}
-                className="w-full mt-1 text-xs font-semibold text-[var(--text-primary)] bg-transparent outline-none cursor-pointer"
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
               />
             </div>
 
-            {/* Travelers & Cabin Trigger */}
-            <div
-              onClick={() => setPassengersOpen(!passengersOpen)}
-              className="p-3 rounded-[var(--radius-control)] border border-[var(--border-hairline)] bg-white cursor-pointer relative"
-            >
-              <span className="block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                Travelers
+            {/* Return Box */}
+            <div className={`p-3.5 rounded-2xl border border-slate-200/90 hover:border-slate-300 bg-white shadow-xs h-[78px] flex flex-col justify-between relative ${
+              tripType === 'one-way' ? 'opacity-50' : ''
+            }`}>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                RETURN
               </span>
-              <div className="text-xs font-semibold text-[var(--text-primary)] mt-1 truncate">
-                {totalPassengers} {totalPassengers === 1 ? 'Adult' : 'Pax'}
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-slate-800 tabular-nums">
+                  {returnDate ? formatDisplayDate(returnDate) : '—'}
+                </span>
+                <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
               </div>
-              <div className="text-[10px] text-[var(--text-muted)] truncate">{cabinClass}</div>
+              {tripType !== 'one-way' && (
+                <input
+                  type="date"
+                  value={returnDate || ''}
+                  onChange={(e) => onReturnDateChange(e.target.value)}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                />
+              )}
+            </div>
+
+            {/* Travellers Box */}
+            <div ref={passengersContainerRef} className="relative">
+              <div
+                onClick={() => setPassengersOpen(!passengersOpen)}
+                className="p-3.5 rounded-2xl border border-slate-200/90 hover:border-slate-300 bg-white cursor-pointer shadow-xs h-[78px] flex flex-col justify-between"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  TRAVELLERS
+                </span>
+                <div>
+                  <div className="text-sm font-semibold text-slate-900 leading-tight">
+                    {totalPassengers} {totalPassengers === 1 ? 'traveller' : 'travellers'}
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5">{cabinClass}</div>
+                </div>
+              </div>
 
               {/* Passengers Drawer / Popover */}
               {passengersOpen && (
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute top-full right-0 mt-2 w-64 bg-white rounded-[var(--radius-control)] shadow-2xl border border-[var(--border-hairline)] p-4 z-[var(--z-popover)] animate-in fade-in zoom-in-95"
+                  className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-50 animate-in fade-in zoom-in-95"
                 >
-                  <div className="text-xs font-bold text-[var(--text-primary)] uppercase tracking-wider mb-3 pb-2 border-b border-[var(--border-hairline)]">
+                  <div className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">
                     Travelers & Cabin
                   </div>
 
                   {/* Adults */}
-                  <div className="flex items-center justify-between py-1.5 text-xs">
+                  <div className="flex items-center justify-between py-2 text-xs">
                     <div>
-                      <span className="font-semibold text-[var(--text-primary)]">Adults</span>
-                      <span className="block text-[10px] text-[var(--text-muted)]">Age 12+</span>
+                      <span className="font-semibold text-slate-800">Adults</span>
+                      <span className="block text-[10px] text-slate-400">Age 12+</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -323,7 +419,7 @@ export function HeroSearch({
                         onClick={() =>
                           onPassengersChange({ ...passengers, adults: Math.max(1, passengers.adults - 1) })
                         }
-                        className="w-6 h-6 rounded-full border border-[var(--border-hairline)] font-bold disabled:opacity-30"
+                        className="w-6 h-6 rounded-full border border-slate-200 font-bold text-slate-600 disabled:opacity-30 hover:bg-slate-100 flex items-center justify-center"
                       >
                         -
                       </button>
@@ -336,7 +432,7 @@ export function HeroSearch({
                         onClick={() =>
                           onPassengersChange({ ...passengers, adults: passengers.adults + 1 })
                         }
-                        className="w-6 h-6 rounded-full border border-[var(--border-hairline)] font-bold"
+                        className="w-6 h-6 rounded-full border border-slate-200 font-bold text-slate-600 hover:bg-slate-100 flex items-center justify-center"
                       >
                         +
                       </button>
@@ -344,8 +440,8 @@ export function HeroSearch({
                   </div>
 
                   {/* Cabin Class Selection */}
-                  <div className="mt-3 pt-2 border-t border-[var(--border-hairline)]">
-                    <span className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">
+                  <div className="mt-3 pt-3 border-t border-slate-100">
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                       Cabin Class
                     </span>
                     {(['Economy', 'Premium Economy', 'Business'] as CabinClass[]).map((c) => (
@@ -356,14 +452,14 @@ export function HeroSearch({
                           onCabinClassChange(c);
                           setPassengersOpen(false);
                         }}
-                        className={`w-full text-left text-xs py-1.5 px-2 rounded-lg flex items-center justify-between ${
+                        className={`w-full text-left text-xs py-1.5 px-2.5 rounded-xl flex items-center justify-between transition-colors ${
                           cabinClass === c
-                            ? 'bg-[var(--accent-soft)] text-[var(--accent-primary)] font-semibold'
-                            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-subtle)]'
+                            ? 'bg-blue-50 text-blue-700 font-semibold'
+                            : 'text-slate-600 hover:bg-slate-50'
                         }`}
                       >
                         <span>{c}</span>
-                        {cabinClass === c && <Check className="w-3.5 h-3.5 text-[var(--accent-primary)]" />}
+                        {cabinClass === c && <Check className="w-3.5 h-3.5 text-blue-700" />}
                       </button>
                     ))}
                   </div>
@@ -373,19 +469,24 @@ export function HeroSearch({
           </div>
         </div>
 
-        {/* Search Action CTA with Magnetic Spring Behavior */}
-        <div className="mt-6 flex justify-center">
+        {/* Bottom Row: Notice Text & Search CTA Button */}
+        <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs text-slate-400 text-center sm:text-left">
+            Prices include mandatory taxes. Seller fees shown before you leave FairFare.
+          </p>
+
           <button
             type="button"
             onClick={onSearch}
-            className="magnetic-btn px-10 py-3.5 rounded-[var(--radius-pill)] bg-[var(--text-primary)] hover:bg-[var(--accent-primary)] text-white font-semibold text-sm tracking-wide shadow-md hover:shadow-lg transition-all touch-target"
+            className="w-full sm:w-auto px-7 py-3 rounded-full bg-slate-900 hover:bg-black text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-xs transition-all hover:shadow-md cursor-pointer select-none"
           >
-            Search Flights
+            <Search className="w-3.5 h-3.5" />
+            <span>Search flights</span>
           </button>
         </div>
       </div>
 
-      {/* 1px Sentinel Element Observed by IntersectionObserver */}
+      {/* Sentinel Element Observed by IntersectionObserver */}
       <div ref={sentinelRef} className="h-[1px] w-full" aria-hidden="true" />
     </div>
   );

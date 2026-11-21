@@ -20,22 +20,21 @@ import {
   SortOption,
   TimeWindow,
 } from '../types/flight';
-import { majorAirports, mockItineraries, mockDayFares } from '../data/mockFlights';
+import { majorAirports, airportMap, mockItineraries, mockDayFares } from '../data/mockFlights';
 import { useScrollProgress } from '../hooks/useScrollProgress';
-import { usePointerType } from '../hooks/usePointerType';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, ArrowUpRight, Info } from 'lucide-react';
 
 export default function FlightBookingApp() {
   // Global State
   const [currency, setCurrency] = useState<CurrencyCode>('INR');
   const [savedCount, setSavedCount] = useState(0);
 
-  // Search State
-  const [tripType, setTripType] = useState<TripType>('one-way');
-  const [origin, setOrigin] = useState<Airport>(majorAirports[0]); // DEL
-  const [destination, setDestination] = useState<Airport>(majorAirports[1]); // BOM
-  const [departureDate, setDepartureDate] = useState('2026-12-14');
-  const [returnDate, setReturnDate] = useState<string | undefined>('2026-12-21');
+  // Search State: Initialized to Chennai (MAA) -> Bengaluru (BLR) as in the reference design
+  const [tripType, setTripType] = useState<TripType>('round-trip');
+  const [origin, setOrigin] = useState<Airport>(airportMap['MAA'] || majorAirports[4]);
+  const [destination, setDestination] = useState<Airport>(airportMap['BLR'] || majorAirports[2]);
+  const [departureDate, setDepartureDate] = useState('2027-01-28');
+  const [returnDate, setReturnDate] = useState<string | undefined>('2027-02-18');
   const [passengers, setPassengers] = useState({ adults: 1, children: 0, infants: 0 });
   const [cabinClass, setCabinClass] = useState<CabinClass>('Economy');
 
@@ -44,15 +43,14 @@ export default function FlightBookingApp() {
   const originInputRef = useRef<HTMLInputElement>(null);
   const [isStickyVisible, setIsStickyVisible] = useState(false);
 
-  // Scroll Progress and Parallax
-  const { scrollProgress, scrollY, prefersReducedMotion } = useScrollProgress();
-  const { isFinePointer } = usePointerType();
+  // Scroll Progress
+  const { scrollProgress } = useScrollProgress();
 
-  // Flexible Date Strip State
+  // Flexible Date Strip State: Sun 14 (Cheapest fare ₹4,190) active by default
   const [selectedDayISO, setSelectedDayISO] = useState('2026-12-14');
   const [isFareStripLoading, setIsFareStripLoading] = useState(false);
 
-  // Filter & Sort Pipeline State
+  // Filter & Sort State
   const [sortOption, setSortOption] = useState<SortOption>('best');
   const [maxPriceInr, setMaxPriceInr] = useState<number>(20000);
   const [selectedStops, setSelectedStops] = useState<number[]>([]);
@@ -87,7 +85,6 @@ export default function FlightBookingApp() {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // When sentinel scrolls above viewport top, show sticky header
         setIsStickyVisible(!entry.isIntersecting && entry.boundingClientRect.top < 0);
       },
       { threshold: 0 }
@@ -97,14 +94,13 @@ export default function FlightBookingApp() {
     return () => observer.disconnect();
   }, []);
 
-  // Handle Date Strip Switch with simulated 200ms shimmer
+  // Handle Date Strip Switch with subtle 180ms shimmer
   const handleSelectDay = (dateISO: string) => {
     setSelectedDayISO(dateISO);
-    setDepartureDate(dateISO);
     setIsFareStripLoading(true);
     setTimeout(() => {
       setIsFareStripLoading(false);
-    }, 200);
+    }, 180);
   };
 
   // Filter & Sort Engine
@@ -170,7 +166,7 @@ export default function FlightBookingApp() {
   };
 
   const handleEditSearch = () => {
-    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => {
       originInputRef.current?.focus();
     }, 350);
@@ -185,7 +181,7 @@ export default function FlightBookingApp() {
     if (!selectedFlightForSeat) return;
     const ref = `FF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     const flightNum = selectedFlightForSeat.segments[0].flightNumber;
-    const route = `${selectedFlightForSeat.segments[0].origin.code} → ${selectedFlightForSeat.segments[0].destination.code}`;
+    const route = `${origin.code} → ${destination.code}`;
 
     setSelectedFlightForSeat(null);
     setSelectedTierForSeat(null);
@@ -200,34 +196,26 @@ export default function FlightBookingApp() {
     });
   };
 
-  // Parallax transform calculation
-  const heroParallaxStyle = prefersReducedMotion
-    ? {}
-    : {
-        transform: `translate3d(0, ${Math.min(scrollY * 0.15, 48)}px, 0)`,
-        opacity: Math.max(1 - scrollY / 320, 0.15),
-      };
-
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] relative selection:bg-blue-100 selection:text-blue-900">
-      {/* 1. Top GPU-composited Scroll Progress Bar */}
+    <div className="min-h-screen text-slate-900 relative selection:bg-blue-100 selection:text-blue-900">
+      {/* 1. Top Scroll Progress Indicator */}
       <div
-        className="fixed top-0 left-0 right-0 h-[2px] bg-[var(--accent-primary)] z-[var(--z-toast)] pointer-events-none origin-left"
+        className="fixed top-0 left-0 right-0 h-[2px] bg-blue-600 z-50 pointer-events-none origin-left"
         style={{
           transform: `scaleX(${scrollProgress})`,
-          transition: prefersReducedMotion ? 'none' : 'transform 60ms linear',
+          transition: 'transform 60ms linear',
         }}
         aria-hidden="true"
       />
 
-      {/* 2. Top Navigation (64px) */}
+      {/* 2. Top Navigation */}
       <Navigation
         currency={currency}
         onCurrencyChange={setCurrency}
         savedCount={savedCount}
       />
 
-      {/* 3. Sticky Compressed Search Header */}
+      {/* 3. Sticky Header (Appears smoothly when scrolling past hero) */}
       <StickyHeader
         isVisible={isStickyVisible}
         origin={origin}
@@ -238,8 +226,8 @@ export default function FlightBookingApp() {
         onEdit={handleEditSearch}
       />
 
-      {/* 4. Hero & Unified Search Section */}
-      <section style={heroParallaxStyle} className="transition-opacity">
+      {/* 4. Hero & Search Section (No translate/parallax overlap) */}
+      <section className="relative">
         <HeroSearch
           tripType={tripType}
           onTripTypeChange={setTripType}
@@ -261,7 +249,7 @@ export default function FlightBookingApp() {
         />
       </section>
 
-      {/* 5. 7-Day Flexible Fare Strip */}
+      {/* 5. 7-Day Flexible Dates Strip */}
       <FlexibleFareStrip
         dayFares={mockDayFares}
         selectedDate={selectedDayISO}
@@ -270,10 +258,10 @@ export default function FlightBookingApp() {
         isLoading={isFareStripLoading}
       />
 
-      {/* 6. Results Layout with Filter Sidebar */}
-      <main className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* Desktop Filter Sidebar & Mobile Trigger */}
+      {/* 6. Results Layout: Filters on Left, Flight Cards on Right */}
+      <main className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+          {/* Left: Filter Sidebar */}
           <FilterSidebar
             sortOption={sortOption}
             onSortOptionChange={setSortOption}
@@ -293,41 +281,67 @@ export default function FlightBookingApp() {
             onCloseMobileSheet={() => setIsMobileSheetOpen(false)}
           />
 
-          {/* Results List */}
-          <div className="flex-1 w-full space-y-4">
-            {/* Results Header with Count & Mobile Filter Trigger */}
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-hairline)] text-xs text-[var(--text-secondary)]">
-              <span className="font-semibold">
-                Showing {filteredFlights.length} verified flights
-              </span>
+          {/* Right: Results Header, Demo Callout Banner, and Flight Cards */}
+          <div className="flex-1 w-full">
+            {/* Header: Route, Flight Count & Compare Link */}
+            <div className="flex items-center justify-between pb-3 mb-3">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                  {origin.code} → {destination.code}
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {filteredFlights.length} of {mockItineraries.length} flights · prices per adult incl. taxes
+                </p>
+              </div>
 
-              {/* Mobile Filter Sheet Trigger */}
-              <button
-                type="button"
-                onClick={() => setIsMobileSheetOpen(true)}
-                className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--border-hairline)] bg-white text-xs font-semibold text-[var(--text-primary)] shadow-sm touch-target"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>Filters</span>
-              </button>
+              <div className="flex items-center gap-3">
+                {/* Mobile Filter Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsMobileSheetOpen(true)}
+                  className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-800 shadow-xs"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span>Filters</span>
+                </button>
+
+                {/* Compare sellers ↗ Link */}
+                <button
+                  type="button"
+                  className="hidden sm:flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                >
+                  <span>Compare sellers</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
-            {/* Flight Cards / Empty State */}
+            {/* Blue Info Callout Banner */}
+            <div className="bg-blue-50/70 border border-blue-200/80 rounded-2xl p-4 flex items-start gap-3 text-xs text-blue-950 mb-5 shadow-xs">
+              <div className="w-5 h-5 rounded-full bg-blue-100 border border-blue-300 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                <Info className="w-3.5 h-3.5" />
+              </div>
+              <p className="leading-relaxed">
+                Live fares for <strong className="font-semibold">{origin.code} → {destination.code}</strong> aren't connected in this demo yet. Showing sample fares for Delhi → Mumbai so you can explore the experience.
+              </p>
+            </div>
+
+            {/* Flight Cards List */}
             {filteredFlights.length === 0 ? (
-              <div className="bg-white rounded-[var(--radius-card)] border border-[var(--border-hairline)] p-12 text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-[var(--bg-subtle)] flex items-center justify-center mx-auto text-[var(--text-muted)] text-xl">
+              <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400 text-xl">
                   ✈
                 </div>
-                <h3 className="text-base font-semibold text-[var(--text-primary)]">
+                <h3 className="text-base font-bold text-slate-900">
                   No flights match these filters
                 </h3>
-                <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto">
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
                   Try broadening your departure time, raising the budget limit, or clearing airline filters.
                 </p>
                 <button
                   type="button"
                   onClick={handleResetFilters}
-                  className="px-5 py-2 rounded-full bg-[var(--text-primary)] text-white text-xs font-semibold hover:bg-[var(--accent-primary)] transition-colors touch-target"
+                  className="px-5 py-2 rounded-full bg-slate-900 text-white text-xs font-semibold hover:bg-black transition-colors"
                 >
                   Reset all filters
                 </button>
@@ -347,7 +361,7 @@ export default function FlightBookingApp() {
         </div>
       </main>
 
-      {/* 7. Cabin Seat Map Dialog / Bottom Sheet */}
+      {/* 7. Cabin Seat Map Dialog */}
       {selectedFlightForSeat && selectedTierForSeat && (
         <SeatMapModal
           isOpen={true}

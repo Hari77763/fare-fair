@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React from 'react';
 import { SortOption, TimeWindow, CurrencyCode } from '../types/flight';
 import { convertPrice } from '../data/mockFlights';
-import { SlidersHorizontal, RotateCcw, X, Luggage } from 'lucide-react';
+import { RotateCcw, X, Luggage } from 'lucide-react';
 
 interface FilterSidebarProps {
   sortOption: SortOption;
@@ -42,42 +42,6 @@ export function FilterSidebar({
   isMobileSheetOpen,
   onCloseMobileSheet,
 }: FilterSidebarProps) {
-  // Mobile physics bottom-sheet drag gesture
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const [dragY, setDragY] = useState(0);
-  const startYRef = useRef(0);
-  const startTimeRef = useRef(0);
-
-  const onPointerDown = (e: React.PointerEvent) => {
-    if (e.pointerType === 'mouse') return;
-    startYRef.current = e.clientY;
-    startTimeRef.current = performance.now();
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!startYRef.current) return;
-    const dy = e.clientY - startYRef.current;
-    if (dy > 0) {
-      setDragY(dy);
-    } else {
-      // Rubber band upward resistance
-      setDragY(dy * 0.2);
-    }
-  };
-
-  const onPointerUp = (e: React.PointerEvent) => {
-    if (!startYRef.current) return;
-    const dy = e.clientY - startYRef.current;
-    const dt = performance.now() - startTimeRef.current;
-    const vy = dy / dt; // velocity in px/ms
-
-    if ((dy > 120 || vy > 0.5) && onCloseMobileSheet) {
-      onCloseMobileSheet();
-    }
-    setDragY(0);
-    startYRef.current = 0;
-  };
-
   const airlinesMeta = [
     { code: '6E', name: 'IndiGo', lowestInr: 4190 },
     { code: 'AI', name: 'Air India', lowestInr: 4890 },
@@ -118,169 +82,162 @@ export function FilterSidebar({
   };
 
   const content = (
-    <div className="space-y-6 text-xs text-[var(--text-secondary)]">
+    <div className="space-y-6 text-xs text-slate-600">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-[var(--border-hairline)]">
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-          <span className="font-semibold uppercase tracking-wider text-[var(--text-primary)]">
-            Filters
-          </span>
-        </div>
+      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <span className="font-bold text-sm text-slate-900">
+          Filters
+        </span>
         <button
           type="button"
           onClick={onResetAll}
-          className="flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--accent-primary)] transition-colors touch-target"
+          className="flex items-center gap-1 text-slate-400 hover:text-slate-800 transition-colors"
         >
           <RotateCcw className="w-3 h-3" />
           <span>Reset</span>
         </button>
       </div>
 
-      {/* Sort Tabs with animated active underline */}
+      {/* SORT BY: 2x2 grid */}
       <div>
-        <span className="block font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-          Sort By
+        <span className="block font-semibold uppercase tracking-wider text-[10px] text-slate-400 mb-2">
+          SORT BY
         </span>
-        <div className="grid grid-cols-2 gap-1.5 p-1 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-hairline)]">
-          {(['best', 'cheapest', 'fastest', 'earliest'] as SortOption[]).map((opt) => (
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              { id: 'best', label: 'Best' },
+              { id: 'cheapest', label: 'Cheapest' },
+              { id: 'fastest', label: 'Fastest' },
+              { id: 'earliest', label: 'Earliest' },
+            ] as const
+          ).map((item) => (
             <button
-              key={opt}
+              key={item.id}
               type="button"
-              onClick={() => onSortOptionChange(opt)}
-              className={`py-1.5 px-2 rounded-lg text-xs font-semibold capitalize transition-all touch-target ${
-                sortOption === opt
-                  ? 'bg-white text-[var(--accent-primary)] shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              onClick={() => onSortOptionChange(item.id)}
+              className={`py-2 px-3 rounded-xl text-xs font-medium text-center transition-all ${
+                sortOption === item.id
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
               }`}
             >
-              {opt}
+              {item.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Price Range Slider */}
-      <div>
-        <div className="flex justify-between items-center mb-1.5">
-          <span className="font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+      {/* Maximum Price Range Slider */}
+      <div className="pt-2">
+        <div className="flex justify-between items-baseline mb-2">
+          <span className="font-semibold uppercase tracking-wider text-[10px] text-slate-400">
             Max Price
           </span>
-          <span className="font-semibold text-[var(--text-primary)] tabular-nums">
+          <span className="font-bold text-slate-900 tabular-nums">
             {convertPrice(maxPriceInr, currency)}
           </span>
         </div>
         <input
           type="range"
-          min="4000"
-          max="20000"
-          step="500"
+          min={3000}
+          max={25000}
+          step={500}
           value={maxPriceInr}
           onChange={(e) => onMaxPriceInrChange(Number(e.target.value))}
-          className="w-full h-1.5 bg-[var(--bg-subtle)] rounded-lg appearance-none cursor-pointer"
+          className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
         />
-        <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-1 tabular-nums">
-          <span>{convertPrice(4000, currency)}</span>
-          <span>{convertPrice(20000, currency)}</span>
+        <div className="flex justify-between text-[10px] text-slate-400 mt-1 tabular-nums">
+          <span>{convertPrice(3000, currency)}</span>
+          <span>{convertPrice(25000, currency)}</span>
         </div>
       </div>
 
-      {/* Stops Segmented Control */}
-      <div>
-        <span className="block font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+      {/* Stops */}
+      <div className="pt-2 border-t border-slate-100">
+        <span className="block font-semibold uppercase tracking-wider text-[10px] text-slate-400 mb-2">
           Stops
         </span>
-        <div className="grid grid-cols-3 gap-1.5">
-          {[
-            { label: 'Any', value: -1 },
-            { label: 'Non-stop', value: 0 },
-            { label: '1 Stop', value: 1 },
-          ].map((item) => {
-            const isSelected =
-              item.value === -1 ? selectedStops.length === 0 : selectedStops.includes(item.value);
-            return (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => {
-                  if (item.value === -1) {
-                    onStopsChange([]);
-                  } else {
-                    toggleStop(item.value);
-                  }
-                }}
-                className={`py-2 px-1 text-center rounded-xl border text-xs font-semibold transition-all touch-target ${
-                  isSelected
-                    ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)] text-[var(--accent-primary)]'
-                    : 'border-[var(--border-hairline)] bg-white text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Departure Time 2x2 Grid */}
-      <div>
-        <span className="block font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-          Departure Time
-        </span>
-        <div className="grid grid-cols-2 gap-2">
-          {timeWindowsMeta.map((tw) => {
-            const isSelected = selectedTimeWindows.includes(tw.id);
-            return (
-              <button
-                key={tw.id}
-                type="button"
-                onClick={() => toggleTimeWindow(tw.id)}
-                className={`p-2.5 rounded-xl border text-left transition-all touch-target ${
-                  isSelected
-                    ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)]'
-                    : 'border-[var(--border-hairline)] bg-white hover:border-[var(--border-strong)]'
-                }`}
-              >
-                <div
-                  className={`text-xs font-semibold ${
-                    isSelected ? 'text-[var(--accent-primary)]' : 'text-[var(--text-primary)]'
-                  }`}
-                >
-                  {tw.label}
-                </div>
-                <div className="text-[10px] text-[var(--text-muted)] mt-0.5 tabular-nums">
-                  {tw.desc}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Airlines Checkbox List */}
-      <div>
-        <span className="block font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
-          Airlines
-        </span>
         <div className="space-y-1.5">
-          {airlinesMeta.map((a) => {
-            const isChecked = selectedAirlines.includes(a.code);
+          {[
+            { stops: 0, label: 'Non-stop only' },
+            { stops: 1, label: '1 Stop' },
+            { stops: 2, label: '2+ Stops' },
+          ].map((item) => {
+            const isChecked = selectedStops.includes(item.stops);
             return (
               <label
-                key={a.code}
-                className="flex items-center justify-between p-2 rounded-xl hover:bg-[var(--bg-subtle)] cursor-pointer select-none transition-colors"
+                key={item.stops}
+                onClick={() => toggleStop(item.stops)}
+                className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer select-none transition-colors"
               >
                 <div className="flex items-center gap-2.5">
                   <input
                     type="checkbox"
                     checked={isChecked}
-                    onChange={() => toggleAirline(a.code)}
-                    className="w-4 h-4 rounded border-[var(--border-strong)] text-[var(--accent-primary)] focus:ring-0"
+                    readOnly
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-0 border-slate-300 pointer-events-none"
                   />
-                  <span className="text-xs font-medium text-[var(--text-primary)]">{a.name}</span>
+                  <span className="font-medium text-slate-800">{item.label}</span>
                 </div>
-                <span className="text-[11px] font-semibold text-[var(--text-muted)] tabular-nums">
-                  {convertPrice(a.lowestInr, currency)}
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Departure Time Windows */}
+      <div className="pt-2 border-t border-slate-100">
+        <span className="block font-semibold uppercase tracking-wider text-[10px] text-slate-400 mb-2">
+          Departure Time
+        </span>
+        <div className="grid grid-cols-2 gap-1.5">
+          {timeWindowsMeta.map((w) => {
+            const isChecked = selectedTimeWindows.includes(w.id);
+            return (
+              <button
+                key={w.id}
+                type="button"
+                onClick={() => toggleTimeWindow(w.id)}
+                className={`p-2 rounded-xl border text-left transition-all ${
+                  isChecked
+                    ? 'border-blue-600 bg-blue-50/60 text-blue-900 font-semibold shadow-xs'
+                    : 'border-slate-200/90 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <div className="font-semibold text-[11px]">{w.label}</div>
+                <div className="text-[10px] text-slate-400 mt-0.5">{w.desc}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Airlines */}
+      <div className="pt-2 border-t border-slate-100">
+        <span className="block font-semibold uppercase tracking-wider text-[10px] text-slate-400 mb-2">
+          Airlines
+        </span>
+        <div className="space-y-1">
+          {airlinesMeta.map((airline) => {
+            const isChecked = selectedAirlines.includes(airline.code);
+            return (
+              <label
+                key={airline.code}
+                onClick={() => toggleAirline(airline.code)}
+                className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer select-none transition-colors"
+              >
+                <div className="flex items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    readOnly
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-0 border-slate-300 pointer-events-none"
+                  />
+                  <span className="font-medium text-slate-800">{airline.name}</span>
+                </div>
+                <span className="text-[11px] text-slate-400 tabular-nums">
+                  from {convertPrice(airline.lowestInr, currency)}
                 </span>
               </label>
             );
@@ -288,57 +245,65 @@ export function FilterSidebar({
         </div>
       </div>
 
-      {/* Baggage Switch */}
-      <div className="pt-2 border-t border-[var(--border-hairline)]">
-        <label className="flex items-center justify-between cursor-pointer select-none">
-          <div className="flex items-center gap-2">
-            <Luggage className="w-4 h-4 text-[var(--text-muted)]" />
-            <span className="text-xs font-medium text-[var(--text-primary)]">
-              Checked bag included
-            </span>
+      {/* Checked Bag Included Toggle */}
+      <div className="pt-2 border-t border-slate-100">
+        <label
+          onClick={() => onRequireCheckedBagChange(!requireCheckedBag)}
+          className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer select-none transition-colors"
+        >
+          <div className="flex items-center gap-2.5">
+            <Luggage className="w-4 h-4 text-slate-400" />
+            <span className="font-medium text-slate-800">Includes checked bag</span>
           </div>
           <input
             type="checkbox"
             checked={requireCheckedBag}
-            onChange={(e) => onRequireCheckedBagChange(e.target.checked)}
-            className="w-4 h-4 rounded border-[var(--border-strong)] text-[var(--accent-primary)]"
+            readOnly
+            className="w-4 h-4 rounded text-blue-600 focus:ring-0 border-slate-300 pointer-events-none"
           />
         </label>
       </div>
     </div>
   );
 
-  // Mobile Bottom Sheet Mode
-  if (isMobileSheetOpen) {
-    return (
-      <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[var(--z-sheet)] flex flex-col justify-end lg:hidden animate-in fade-in"
-        onClick={onCloseMobileSheet}
-      >
-        <div
-          ref={sheetRef}
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          style={{
-            transform: `translate3d(0, ${Math.max(dragY, 0)}px, 0)`,
-            transition: dragY === 0 ? 'transform 240ms cubic-bezier(0.22, 1, 0.36, 1)' : 'none',
-          }}
-          className="bg-white rounded-[var(--radius-sheet)] max-h-[85vh] overflow-y-auto p-6 shadow-[var(--shadow-sheet)]"
-        >
-          {/* Centered 36x4 drag handle */}
-          <div className="w-9 h-1 rounded-full bg-[var(--border-strong)] mx-auto mb-5"></div>
-          {content}
-        </div>
-      </div>
-    );
-  }
-
-  // Desktop Sticky Sidebar Mode
   return (
-    <aside className="hidden lg:block w-72 shrink-0 p-5 rounded-[var(--radius-card)] border border-[var(--border-hairline)] bg-[var(--bg-surface)] shadow-[var(--shadow-card)] sticky top-20">
-      {content}
-    </aside>
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <aside className="hidden lg:block w-[260px] shrink-0 sticky top-20 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-sm p-4">
+        {content}
+      </aside>
+
+      {/* Mobile Modal Drawer */}
+      {isMobileSheetOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex items-end">
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
+            onClick={onCloseMobileSheet}
+          />
+          <div className="relative w-full max-h-[85vh] bg-white rounded-t-3xl p-5 shadow-2xl overflow-y-auto z-10 animate-in slide-in-from-bottom duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <span className="font-bold text-base text-slate-900">Filters</span>
+              <button
+                type="button"
+                onClick={onCloseMobileSheet}
+                className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {content}
+            <div className="mt-6 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={onCloseMobileSheet}
+                className="w-full py-3 rounded-full bg-slate-900 text-white font-semibold text-xs text-center shadow-xs"
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

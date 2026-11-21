@@ -25,31 +25,27 @@ export function StickyHeader({
 }: StickyHeaderProps) {
   return (
     <div
-      className={`fixed top-16 left-0 right-0 h-14 bg-[var(--bg-elevated)] backdrop-blur-md border-b border-[var(--border-hairline)] shadow-[var(--shadow-sticky)] z-[var(--z-sticky-header)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+      className={`fixed top-16 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm z-30 transition-transform duration-300 ease-out ${
         isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}
       style={{ willChange: 'transform, opacity' }}
       aria-hidden={!isVisible}
     >
-      <div className="max-w-[1200px] h-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-        <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-semibold text-[var(--text-primary)]">
-          <span className="font-mono">{origin.code}</span>
-          <ArrowRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-          <span className="font-mono">{destination.code}</span>
-          <span className="text-[var(--border-strong)] mx-1">·</span>
-          <span className="text-[var(--text-secondary)] font-normal text-xs hidden sm:inline">
-            {new Date(departureDate).toLocaleDateString('en-IN', {
-              day: 'numeric',
-              month: 'short',
-            })}{' '}
-            · {adultsCount} Adult · {cabinClass}
+      <div className="max-w-[1140px] h-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-semibold text-slate-900">
+          <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-800">{origin.code}</span>
+          <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+          <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-800">{destination.code}</span>
+          <span className="text-slate-300 mx-1">·</span>
+          <span className="text-slate-500 font-normal text-xs hidden sm:inline">
+            {departureDate} · {adultsCount} Adult · {cabinClass}
           </span>
         </div>
 
         <button
           type="button"
           onClick={onEdit}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--border-hairline)] bg-white hover:bg-[var(--bg-subtle)] text-xs font-semibold text-[var(--accent-primary)] shadow-sm transition-colors touch-target"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-800 shadow-xs transition-colors"
         >
           <Edit3 className="w-3.5 h-3.5" />
           <span>Edit Search</span>

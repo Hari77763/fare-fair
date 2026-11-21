@@ -7,7 +7,7 @@
   --bg-canvas: #F8FAFC;
   --bg-surface: #FFFFFF;
   --bg-subtle: #F1F5F9;
-  --bg-elevated: rgba(255, 255, 255, 0.97);
+  --bg-elevated: rgba(255, 255, 255, 0.92);
   --border-hairline: #E2E8F0;
   --border-strong: #CBD5E1;
   --text-primary: #0F172A;
@@ -21,7 +21,7 @@
   --semantic-danger: #DC2626;
 
   /* Elevation Shadows */
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
   --shadow-hover: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 4px 10px -6px rgba(15, 23, 42, 0.04);
   --shadow-sticky: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
   --shadow-sheet: 0 -12px 40px -8px rgba(15, 23, 42, 0.16);
@@ -30,15 +30,15 @@
   --z-base: 1;
   --z-sticky-sidebar: 20;
   --z-sticky-header: 30;
-  --z-popover: 40;
-  --z-backdrop: 50;
-  --z-sheet: 60;
-  --z-tooltip: 70;
-  --z-toast: 80;
+  --z-popover: 50;
+  --z-backdrop: 60;
+  --z-sheet: 70;
+  --z-tooltip: 80;
+  --z-toast: 90;
 
   /* Radii */
-  --radius-card: 16px;
-  --radius-control: 12px;
+  --radius-card: 20px;
+  --radius-control: 14px;
   --radius-pill: 9999px;
   --radius-sheet: 24px 24px 0 0;
 }
@@ -55,77 +55,6 @@
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   perspective: 1000px;
-  will-change: transform, opacity;
-}
-
-/* Spotlight Border Effect (Desktop Fine Pointer Only) */
-@media (hover: hover) and (pointer: fine) {
-  .spotlight-card {
-    position: relative;
-    border: 1px solid var(--border-hairline);
-    transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .spotlight-card::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    padding: 1px;
-    background: radial-gradient(
-      360px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
-      rgba(29, 78, 216, 0.35),
-      transparent 45%
-    );
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 220ms ease;
-  }
-
-  .spotlight-card:hover::before {
-    opacity: 1;
-  }
-
-  .spotlight-card:hover {
-    transform: translate3d(0, -2px, 0);
-    box-shadow: var(--shadow-hover);
-  }
-
-  /* Magnetic CTA Button with spring physics */
-  .magnetic-btn {
-    transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1), background-color 150ms ease;
-    will-change: transform;
-  }
-
-  .btn-hover-elevate:hover {
-    background-color: var(--accent-hover);
-  }
-}
-
-/* Mobile Touch Ergonomics (pointer: coarse) */
-@media (pointer: coarse) {
-  .touch-target {
-    min-height: 48px;
-    min-width: 48px;
-  }
-
-  .touch-press {
-    transition: transform 90ms ease-out, background-color 90ms ease-out;
-  }
-
-  .touch-press:active {
-    transform: scale(0.98);
-    background-color: var(--bg-subtle) !important;
-  }
-
-  /* Avoid sticky hover artifacts on mobile devices */
-  .spotlight-card:hover {
-    transform: none;
-    box-shadow: var(--shadow-card);
-  }
 }
 
 /* Momentum Scrollbar Styling */
@@ -166,11 +95,5 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-  .spotlight-card:hover {
-    transform: none !important;
-  }
-  .route-arc-path {
-    stroke-dashoffset: 0 !important;
   }
 }
