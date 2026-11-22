@@ -19,6 +19,7 @@ export interface LiveFaresState {
   fetchedAt?: string;
   message?: string;
   allResultsUrl?: string;
+  nearbyFares?: LiveFare[];
   query?: FareSearch;
 }
 
@@ -70,6 +71,7 @@ export function useLiveFares() {
         fetchedAt: body.fetchedAt,
         message: body.message,
         allResultsUrl: body.allResultsUrl,
+        nearbyFares: body.status === 'live' ? body.nearbyFares ?? [] : [],
         query: q,
       };
     } catch (err) {

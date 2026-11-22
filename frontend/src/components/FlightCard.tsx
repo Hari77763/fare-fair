@@ -13,6 +13,8 @@ interface FlightCardProps {
   isSaved: boolean;
   onToggleSave: (id: string) => void;
   highlights: ('cheapest' | 'fastest')[];
+  /** Show the departure date (used when results span several days) */
+  showDate?: boolean;
 }
 
 /** Itinerary times are stored as airport-local wall clock in the ISO string. */
@@ -31,7 +33,7 @@ function formatDuration(mins: number) {
   return m ? `${h}h ${m}m` : `${h}h`;
 }
 
-export function FlightCard({ flight, currency, onSelectFare, index, isSaved, onToggleSave, highlights }: FlightCardProps) {
+export function FlightCard({ flight, currency, onSelectFare, index, isSaved, onToggleSave, highlights, showDate = false }: FlightCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [selectedTier, setSelectedTier] = useState<FareTier>(flight.fareTiers[0]);
   const cardRef = useRef<HTMLElement>(null);
@@ -73,8 +75,18 @@ export function FlightCard({ flight, currency, onSelectFare, index, isSaved, onT
     >
       <div className="p-4 sm:p-6">
         {/* Tag row */}
-        {(tags.length > 0 || lowSeats) && (
+        {(tags.length > 0 || lowSeats || showDate) && (
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            {showDate && (
+              <span className="rounded-full bg-[var(--text-primary)] px-2 py-0.5 text-[11px] font-semibold text-white">
+                {new Date(`${segment.departureISO.slice(0, 10)}T00:00:00Z`).toLocaleDateString('en-GB', {
+                  weekday: 'short',
+                  day: 'numeric',
+                  month: 'short',
+                  timeZone: 'UTC',
+                })}
+              </span>
+            )}
             {tags.map((t) => (
               <span
                 key={t}

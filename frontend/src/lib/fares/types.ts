@@ -43,6 +43,8 @@ export interface FaresResponse {
   source: 'Aviasales';
   /** Full live search on the seller for this route and date (affiliate-tagged) */
   allResultsUrl?: string;
+  /** Closest days with real fares, returned when the requested day has none */
+  nearbyFares?: LiveFare[];
   message?: string;
 }
 

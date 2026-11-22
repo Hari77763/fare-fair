@@ -165,8 +165,11 @@ export default function FlightBookingApp() {
 
   // Live fares when the fare source answered; demo itineraries otherwise
   const sourceItineraries = useMemo(
-    () => (isLive ? live.fares.map((f) => liveFareToItinerary(f, live.roundTrip)) : mockItineraries),
-    [isLive, live.fares, live.roundTrip]
+    () =>
+      isLive
+        ? (live.fares.length ? live.fares : live.nearbyFares ?? []).map((f) => liveFareToItinerary(f, live.roundTrip))
+        : mockItineraries,
+    [isLive, live.fares, live.nearbyFares, live.roundTrip]
   );
 
   // Airline filter options come from the data, not a hard-coded list
@@ -329,6 +332,16 @@ export default function FlightBookingApp() {
   const isSampleRoute =
     searchedRoute.origin === SAMPLE_ROUTE.origin && searchedRoute.destination === SAMPLE_ROUTE.destination;
   const isDemo = !isLive && !isSearching;
+  // Exact day had no cached fares, so the closest real days are shown instead
+  const isNearby = isLive && live.fares.length === 0 && (live.nearbyFares?.length ?? 0) > 0;
+  const requestedDayLabel = live.query
+    ? new Date(`${live.query.departureDate}T00:00:00Z`).toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'UTC',
+      })
+    : '';
   const updatedAt = live.fetchedAt
     ? new Date(live.fetchedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
     : '';
@@ -454,7 +467,35 @@ export default function FlightBookingApp() {
               </div>
             </div>
 
-            {!showSavedOnly && isLive && (
+            {!showSavedOnly && isNearby && (
+              <div
+                role="note"
+                className="mb-4 flex animate-fade-up flex-wrap items-start justify-between gap-3 glass-card rounded-[var(--radius-control)] px-4 py-3 text-sm text-[var(--text-secondary)]"
+              >
+                <div className="flex items-start gap-3">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
+                  <p>
+                    <strong className="font-semibold text-[var(--text-primary)]">
+                      No recent fares for {requestedDayLabel}.
+                    </strong>{' '}
+                    Showing the closest dates travellers have priced on {searchedRoute.origin} → {searchedRoute.destination}.
+                  </p>
+                </div>
+                {live.allResultsUrl && (
+                  <a
+                    href={live.allResultsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer sponsored"
+                    className="btn btn-secondary h-8 px-3 text-xs"
+                  >
+                    Search {requestedDayLabel} live
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
+            )}
+
+            {!showSavedOnly && isLive && !isNearby && (
               <div
                 role="note"
                 className="mb-4 flex animate-fade-up items-start gap-3 glass-card rounded-[var(--radius-control)] px-4 py-3 text-sm text-[var(--text-secondary)]"
@@ -526,16 +567,28 @@ export default function FlightBookingApp() {
                     {showSavedOnly
                       ? 'Tap the bookmark on any flight to keep it here while you compare.'
                       : isLive && sourceItineraries.length === 0
-                      ? 'Nobody has searched this route and day recently. Try a nearby date in the strip above.'
+                      ? 'Aviasales hasn’t cached recent prices for this route around this date. A live search checks every airline right now.'
                       : 'Try a wider departure window, a higher budget or fewer airline filters.'}
                   </p>
-                  <button
-                    type="button"
-                    onClick={showSavedOnly ? () => setShowSavedOnly(false) : handleResetFilters}
-                    className="btn btn-primary mt-5 h-10 px-5 text-sm"
-                  >
-                    {showSavedOnly ? 'Show all flights' : 'Reset filters'}
-                  </button>
+                  {!showSavedOnly && isLive && sourceItineraries.length === 0 && live.allResultsUrl ? (
+                    <a
+                      href={live.allResultsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer sponsored"
+                      className="btn btn-primary mt-5 h-10 px-5 text-sm"
+                    >
+                      Search all airlines live on Aviasales
+                      <ArrowUpRight className="h-4 w-4" />
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={showSavedOnly ? () => setShowSavedOnly(false) : handleResetFilters}
+                      className="btn btn-primary mt-5 h-10 px-5 text-sm"
+                    >
+                      {showSavedOnly ? 'Show all flights' : 'Reset filters'}
+                    </button>
+                  )}
                 </div>
               ) : (
                 filteredFlights.map((flight, idx) => (
@@ -550,6 +603,7 @@ export default function FlightBookingApp() {
                       ...(flight.id === fastestId ? (['fastest'] as const) : []),
                     ]}
                     onToggleSave={toggleSave}
+                    showDate={isNearby}
                     onSelectFare={(f, tier) => setSeatSelection({ flight: f, tier })}
                   />
                 ))

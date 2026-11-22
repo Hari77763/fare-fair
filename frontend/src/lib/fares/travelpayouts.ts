@@ -192,7 +192,13 @@ export function normalizePricesForDates(
       priceInr: Math.round(price),
       bookingUrl:
         buildBookingUrl(item.link, ctx.marker) ??
-        searchDeepLink(origin, destination, ctx.departureDate, ctx.marker, ctx.returnDate),
+        searchDeepLink(
+          origin,
+          destination,
+          DATE.test(departureAt.slice(0, 10)) ? departureAt.slice(0, 10) : ctx.departureDate,
+          ctx.marker,
+          ctx.returnDate
+        ),
       foundAt: str(item.found_at) || undefined,
       expiresAt: str(item.expires_at) || undefined,
     };
@@ -361,6 +367,64 @@ export async function fetchCalendar(
     )
   );
   return normalizeCalendar(jsons, q.start, q.days);
+}
+
+/**
+ * When the exact day has no cached fares, finds the closest days (within
+ * ±windowDays, never in the past) that do, cheapest fare per day. One-way only.
+ */
+export async function searchNearbyFares(
+  q: FareQuery,
+  cfg: TravelpayoutsConfig,
+  fetchImpl: typeof fetch = fetch,
+  windowDays = 14,
+  maxDays = 3,
+  today = new Date().toISOString().slice(0, 10)
+): Promise<LiveFare[]> {
+  if (!cfg.token || q.returnDate) return [];
+  const from = addDays(q.departureDate, -windowDays);
+  const to = addDays(q.departureDate, windowDays);
+  const months = Array.from(new Set([from.slice(0, 7), q.departureDate.slice(0, 7), to.slice(0, 7)]));
+  const market = q.market ?? cfg.market;
+
+  const jsons = await Promise.all(
+    months.map((month) =>
+      getJson(
+        '/aviasales/v3/prices_for_dates',
+        {
+          origin: q.origin,
+          destination: q.destination,
+          departure_at: month,
+          one_way: 'true',
+          direct: 'false',
+          sorting: 'price',
+          unique: 'false',
+          currency: 'inr',
+          limit: '1000',
+          page: '1',
+          ...(market ? { market } : {}),
+        },
+        cfg.token as string,
+        fetchImpl
+      )
+    )
+  );
+
+  const ctx = { ...q, marker: cfg.marker };
+  const dayDiff = (d: string) =>
+    Math.abs(Date.parse(`${d}T00:00:00Z`) - Date.parse(`${q.departureDate}T00:00:00Z`)) / 86_400_000;
+
+  const cheapestPerDay = new Map<string, LiveFare>();
+  for (const fare of jsons.flatMap((j) => normalizePricesForDates(j, ctx))) {
+    const day = fare.departureAt.slice(0, 10);
+    if (day === q.departureDate || day < today || dayDiff(day) > windowDays) continue;
+    const prev = cheapestPerDay.get(day);
+    if (!prev || fare.priceInr < prev.priceInr) cheapestPerDay.set(day, fare);
+  }
+
+  return Array.from(cheapestPerDay.values())
+    .sort((a, b) => dayDiff(a.departureAt.slice(0, 10)) - dayDiff(b.departureAt.slice(0, 10)) || a.priceInr - b.priceInr)
+    .slice(0, maxDays);
 }
 
 /** User-facing explanation of an upstream failure (never includes secrets). */

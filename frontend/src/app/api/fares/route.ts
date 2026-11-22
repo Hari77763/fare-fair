@@ -6,6 +6,7 @@ import {
   parseFareQuery,
   searchDeepLink,
   searchFares,
+  searchNearbyFares,
 } from '../../../lib/fares/travelpayouts';
 import { enrichFare } from '../../../lib/reference/directory';
 
@@ -40,8 +41,13 @@ export async function GET(request: Request): Promise<Response> {
 
   try {
     const fares = (await searchFares(query, config)).map(enrichFare);
+    // Cached data is sparse on less-searched routes: offer the closest real days
+    const nearbyFares =
+      fares.length === 0
+        ? (await searchNearbyFares(query, config).catch(() => [] as typeof fares)).map(enrichFare)
+        : [];
     const allResultsUrl = searchDeepLink(query.origin, query.destination, query.departureDate, config.marker, query.returnDate);
-    return Response.json({ ...base, status: 'live', roundTrip, fares, allResultsUrl } satisfies FaresResponse, {
+    return Response.json({ ...base, status: 'live', roundTrip, fares, nearbyFares, allResultsUrl } satisfies FaresResponse, {
       headers: {
         'Cache-Control': `public, s-maxage=${REVALIDATE_SECONDS / 2}, stale-while-revalidate=${REVALIDATE_SECONDS}`,
       },

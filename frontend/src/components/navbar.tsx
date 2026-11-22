@@ -70,7 +70,8 @@ export function Navbar({
 
   return (
     <header
-      className="sticky top-0 w-full px-3 pt-2.5 sm:px-4"
+      // Soft fade behind the floating capsule so scrolled content doesn't show above it
+      className="sticky top-0 w-full bg-gradient-to-b from-[rgba(247,248,250,0.96)] via-[rgba(247,248,250,0.75)] to-[rgba(247,248,250,0)] px-3 pt-2.5 sm:px-4"
       style={{ zIndex: "var(--z-sticky-header)", height: "var(--header-h)" }}
     >
       {/* Floating glass capsule; tightens and deepens once the page scrolls */}

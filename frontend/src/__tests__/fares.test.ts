@@ -366,3 +366,63 @@ describe('airport & airline directory (OurAirports + OpenFlights)', () => {
     expect((await airportsGET(new Request('http://localhost/api/airports?q=<script>'))).status).toBe(400);
   });
 });
+
+// ------------------------------------------------------- nearest-date fallback
+import { searchNearbyFares } from '../lib/fares/travelpayouts';
+
+describe('nearest-date fallback (sparse cached routes)', () => {
+  const month = {
+    currency: 'inr',
+    data: [
+      { price: 7214, airline: '6E', flight_number: 1, departure_at: '2026-12-01T08:00:00+05:30', transfers: 0, duration_to: 150 },
+      { price: 7836, airline: '6E', flight_number: 2, departure_at: '2026-12-02T08:00:00+05:30', transfers: 0, duration_to: 150 },
+      { price: 9000, airline: 'AI', flight_number: 3, departure_at: '2026-12-02T18:00:00+05:30', transfers: 0, duration_to: 150 },
+      { price: 6500, airline: 'QP', flight_number: 4, departure_at: '2026-12-20T10:00:00+05:30', transfers: 0, duration_to: 150 },
+      { price: 5000, airline: 'SG', flight_number: 5, departure_at: '2026-11-20T10:00:00+05:30', transfers: 0, duration_to: 150 }, // past
+      { price: 4000, airline: 'SG', flight_number: 6, departure_at: '2026-12-31T10:00:00+05:30', transfers: 0, duration_to: 150 }, // > 14 days
+    ],
+  };
+  const q = { origin: 'MAA', destination: 'AMD', departureDate: '2026-12-14' };
+  const cfg = { token: 't', marker: 'm' };
+  const fetchMonth = vi.fn(async () => new Response(JSON.stringify(month), { status: 200 }));
+
+  it('returns the cheapest fare on each of the closest days, nearest first', async () => {
+    const fares = await searchNearbyFares(q, cfg, fetchMonth as unknown as typeof fetch, 14, 3, '2026-11-22');
+    expect(fares.map((f) => [f.departureAt.slice(0, 10), f.priceInr])).toEqual([
+      ['2026-12-20', 6500], // 6 days away
+      ['2026-12-02', 7836], // 12 days away, cheapest that day
+      ['2026-12-01', 7214], // 13 days away
+    ]);
+    // booking links point at each fare's own date
+    expect(fares[0].bookingUrl).toContain('/search/MAA2012AMD1');
+  });
+
+  it('skips round trips and missing tokens', async () => {
+    expect(await searchNearbyFares({ ...q, returnDate: '2026-12-20' }, cfg, fetchMonth as unknown as typeof fetch)).toEqual([]);
+    expect(await searchNearbyFares(q, { token: undefined }, fetchMonth as unknown as typeof fetch)).toEqual([]);
+  });
+
+  it('the fares route offers nearby days only when the exact day is empty', async () => {
+    process.env.TRAVELPAYOUTS_TOKEN = 't';
+    const future = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+    const near = new Date(Date.now() + 33 * 86_400_000).toISOString().slice(0, 10);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const isMonth = /departure_at=\d{4}-\d{2}(&|$)/.test(url);
+        const body = isMonth
+          ? { currency: 'inr', data: [{ price: 7000, airline: '6E', flight_number: 9, departure_at: `${near}T09:00:00+05:30`, transfers: 0 }] }
+          : { currency: 'inr', data: [] };
+        return new Response(JSON.stringify(body), { status: 200 });
+      })
+    );
+    const res = await faresGET(new Request(`http://localhost/api/fares?origin=MAA&destination=AMD&departure_date=${future}`));
+    const body = await res.json();
+    expect(body.status).toBe('live');
+    expect(body.fares).toHaveLength(0);
+    expect(body.nearbyFares).toHaveLength(1);
+    expect(body.nearbyFares[0].originInfo.city).toBe('Chennai');
+    vi.unstubAllGlobals();
+    delete process.env.TRAVELPAYOUTS_TOKEN;
+  });
+});
