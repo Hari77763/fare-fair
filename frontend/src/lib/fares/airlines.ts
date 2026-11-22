@@ -2,7 +2,7 @@
  * IATA airline code → display name. Fare sources return codes only.
  * Unknown codes fall back to the code itself.
  */
-const AIRLINES: Record<string, string> = {
+export const CURATED_AIRLINES: Record<string, string> = {
   // India
   '6E': 'IndiGo',
   AI: 'Air India',
@@ -59,5 +59,5 @@ const AIRLINES: Record<string, string> = {
 };
 
 export function airlineName(code: string): string {
-  return AIRLINES[code?.toUpperCase()] ?? code;
+  return CURATED_AIRLINES[code?.toUpperCase()] ?? code;
 }

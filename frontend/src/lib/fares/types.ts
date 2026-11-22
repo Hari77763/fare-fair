@@ -2,6 +2,7 @@
  * Shapes shared by the fares API routes (server) and the home page (client).
  * Nothing in here may reference secrets.
  */
+import type { Airport } from '../../types/flight';
 
 /** One bookable price found by the upstream fare source, normalised. */
 export interface LiveFare {
@@ -20,6 +21,10 @@ export interface LiveFare {
   bookingUrl: string;
   foundAt?: string;
   expiresAt?: string;
+  /** Added by the API from the airport/airline directory (any airport worldwide) */
+  originInfo?: Airport;
+  destinationInfo?: Airport;
+  airlineName?: string;
 }
 
 /**

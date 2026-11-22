@@ -75,7 +75,20 @@ export function Footer() {
         </div>
 
         <div className="flex flex-col gap-3 border-t border-[var(--border-hairline)] pt-6 text-xs text-[var(--text-muted)] sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} FairFare Metasearch India</p>
+          <div className="space-y-1">
+            <p>© {new Date().getFullYear()} FairFare Metasearch India</p>
+            <p>
+              Airport data:{' '}
+              <a href="https://ourairports.com/data/" target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">
+                OurAirports
+              </a>{' '}
+              (public domain). Airline data © {' '}
+              <a href="https://openflights.org/data" target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">
+                OpenFlights
+              </a>{' '}
+              contributors (ODbL). Fares via Aviasales.
+            </p>
+          </div>
           <div className="flex items-center gap-5">
             <Link href="/privacy" className="transition-colors hover:text-[var(--text-primary)]">
               Privacy

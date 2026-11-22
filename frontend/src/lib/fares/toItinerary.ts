@@ -39,10 +39,11 @@ function departureWallClock(departureAt: string, originTz?: string): string {
 export function liveFareToItinerary(fare: LiveFare, roundTrip: boolean): FlightItinerary {
   const originCode = fare.originAirport || fare.origin;
   const destCode = fare.destinationAirport || fare.destination;
-  const origin = airportOrCode(originCode);
-  const destination = airportOrCode(destCode);
-  const originTz = findAirport(originCode)?.tz ?? findAirport(fare.origin)?.tz;
-  const destTz = findAirport(destCode)?.tz ?? findAirport(fare.destination)?.tz;
+  // Prefer the server-provided directory entry (covers ~4,000 airports)
+  const origin = fare.originInfo ?? airportOrCode(originCode);
+  const destination = fare.destinationInfo ?? airportOrCode(destCode);
+  const originTz = origin.tz ?? findAirport(originCode)?.tz ?? findAirport(fare.origin)?.tz;
+  const destTz = destination.tz ?? findAirport(destCode)?.tz ?? findAirport(fare.destination)?.tz;
 
   const departureISO = departureWallClock(fare.departureAt, originTz);
   // Arrival is only shown when it can be computed correctly (duration + dest tz)
@@ -62,7 +63,7 @@ export function liveFareToItinerary(fare: LiveFare, roundTrip: boolean): FlightI
       {
         id: `seg-${fare.id}`,
         airlineCode: fare.airlineCode || '—',
-        airlineName: fare.airlineCode ? airlineName(fare.airlineCode) : 'Multiple airlines',
+        airlineName: fare.airlineName ?? (fare.airlineCode ? airlineName(fare.airlineCode) : 'Multiple airlines'),
         flightNumber: fare.flightNumber,
         aircraft: '',
         origin,

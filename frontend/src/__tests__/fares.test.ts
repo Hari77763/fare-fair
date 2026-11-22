@@ -303,3 +303,66 @@ describe('API routes', () => {
     });
   });
 });
+
+// ------------------------------------------------------------- reference data
+import { AIRPORT_COUNT, airlineDisplayName, enrichFare, lookupAirport, searchAirports } from '../lib/reference/directory';
+import { GET as airportsGET } from '../app/api/airports/route';
+
+describe('airport & airline directory (OurAirports + OpenFlights)', () => {
+  it('covers thousands of airports, each with a time zone', () => {
+    expect(AIRPORT_COUNT).toBeGreaterThan(3000);
+    expect(lookupAirport('NMI')?.tz).toBe('Asia/Kolkata');
+    expect(lookupAirport('SHJ')?.tz).toBe('Asia/Dubai');
+    expect(lookupAirport('jfk')?.tz).toBe('America/New_York');
+  });
+
+  it('keeps curated names over generated ones', () => {
+    expect(lookupAirport('GOX')?.city).toBe('Goa');
+    expect(lookupAirport('DEL')?.name).toBe('Indira Gandhi International');
+  });
+
+  it('ranks exact codes, then cities, then names', () => {
+    expect(searchAirports('lhr')[0].code).toBe('LHR');
+    expect(searchAirports('goa').map((a) => a.code).slice(0, 3)).toEqual(['GOI', 'GOX', 'GOA']); // Goa first, Genoa still listed
+    expect(searchAirports('heathrow')[0].code).toBe('LHR');
+    expect(searchAirports('zürich')[0]?.code).toBe('ZRH'); // accents folded
+    expect(searchAirports('')).toHaveLength(12); // popular list
+  });
+
+  it('prefers curated airline names where OpenFlights is out of date', () => {
+    expect(airlineDisplayName('QP')).toBe('Akasa Air'); // OpenFlights still says "Air Kenya"
+    expect(airlineDisplayName('LX')).toBe('SWISS');
+    expect(airlineDisplayName('ZZ9')).toBe('ZZ9');
+  });
+
+  it('enriches live fares so any airport gets correct local times', () => {
+    const [fare] = normalizePricesForDates(
+      {
+        currency: 'inr',
+        data: [
+          {
+            origin: 'BOM', destination: 'DXB', origin_airport: 'BOM', destination_airport: 'SHJ',
+            price: 17238, airline: 'G9', flight_number: 402, transfers: 0, duration_to: 195,
+            departure_at: '2026-12-13T21:30:00+05:30', link: '/search/BOM1312DXB1?t=x',
+          },
+        ],
+      },
+      { origin: 'BOM', destination: 'DXB', departureDate: '2026-12-13' }
+    );
+    const enriched = enrichFare(fare);
+    expect(enriched.destinationInfo?.city).toBe('Sharjah');
+    expect(enriched.airlineName).toBe('Air Arabia');
+    const it = liveFareToItinerary(enriched, false);
+    // 21:30 IST + 3h15 = 00:45 IST = 23:15 in Sharjah (UTC+4), same calendar day
+    expect(it.segments[0].arrivalISO).toBe('2026-12-13T23:15:00Z');
+    expect(it.segments[0].destination.city).toBe('Sharjah');
+  });
+
+  it('serves search results over the API with long caching', async () => {
+    const res = await airportsGET(new Request('http://localhost/api/airports?q=sharjah'));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('cache-control')).toContain('s-maxage=86400');
+    expect((await res.json()).airports[0].code).toBe('SHJ');
+    expect((await airportsGET(new Request('http://localhost/api/airports?q=<script>'))).status).toBe(400);
+  });
+});

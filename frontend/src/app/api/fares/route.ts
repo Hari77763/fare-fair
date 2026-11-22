@@ -7,6 +7,7 @@ import {
   searchDeepLink,
   searchFares,
 } from '../../../lib/fares/travelpayouts';
+import { enrichFare } from '../../../lib/reference/directory';
 
 /**
  * GET /api/fares?origin=DEL&destination=BOM&departure_date=2026-12-14[&return_date=…]
@@ -38,7 +39,7 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   try {
-    const fares = await searchFares(query, config);
+    const fares = (await searchFares(query, config)).map(enrichFare);
     const allResultsUrl = searchDeepLink(query.origin, query.destination, query.departureDate, config.marker, query.returnDate);
     return Response.json({ ...base, status: 'live', roundTrip, fares, allResultsUrl } satisfies FaresResponse, {
       headers: {

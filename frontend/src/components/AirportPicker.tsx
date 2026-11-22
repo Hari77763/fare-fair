@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useId, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import type { Airport } from '../types/flight';
 import { useDismiss } from '../hooks/useDismiss';
@@ -42,10 +42,45 @@ export function AirportPicker({ label, value, onChange, airports, excludeCode, t
   const uid = useId();
   const listboxId = `${uid}-listbox`;
 
-  const results = useMemo(
-    () => airports.filter((a) => a.code !== excludeCode && matches(a, query)),
-    [airports, excludeCode, query]
-  );
+  // Popular airports filter instantly; typing 2+ characters also searches all
+  // ~4,000 airports on the server (debounced, stale requests cancelled).
+  const [remote, setRemote] = useState<{ query: string; airports: Airport[] } | null>(null);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!open || q.length < 2) {
+      setRemote(null);
+      setSearching(false);
+      return;
+    }
+    const ctl = new AbortController();
+    setSearching(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/airports?q=${encodeURIComponent(q)}`, { signal: ctl.signal });
+        const body = (await res.json()) as { airports?: Airport[] };
+        if (!ctl.signal.aborted) setRemote({ query: q, airports: body.airports ?? [] });
+      } catch {
+        /* offline or aborted: the local popular list still works */
+      } finally {
+        if (!ctl.signal.aborted) setSearching(false);
+      }
+    }, 140);
+    return () => {
+      ctl.abort();
+      window.clearTimeout(timer);
+    };
+  }, [query, open]);
+
+  const results = useMemo(() => {
+    const local = airports.filter((a) => matches(a, query));
+    const fromServer = remote && remote.query === query.trim() ? remote.airports : [];
+    const seen = new Set<string>();
+    return [...(fromServer.length ? fromServer : local), ...local]
+      .filter((a) => a.code !== excludeCode && !seen.has(a.code) && (seen.add(a.code), true))
+      .slice(0, 12);
+  }, [airports, excludeCode, query, remote]);
 
   const close = (restoreFocus = false) => {
     setOpen(false);
@@ -158,7 +193,7 @@ export function AirportPicker({ label, value, onChange, airports, excludeCode, t
           >
             {results.length === 0 && (
               <li className="px-3 py-6 text-center text-sm text-[var(--text-muted)]">
-                No airports match “{query}”.
+                {searching ? 'Searching airports…' : `No airports match “${query}”.`}
               </li>
             )}
             {results.map((a, i) => {
