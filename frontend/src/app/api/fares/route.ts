@@ -4,6 +4,7 @@ import {
   friendlyError,
   getConfig,
   parseFareQuery,
+  searchDeepLink,
   searchFares,
 } from '../../../lib/fares/travelpayouts';
 
@@ -38,7 +39,8 @@ export async function GET(request: Request): Promise<Response> {
 
   try {
     const fares = await searchFares(query, config);
-    return Response.json({ ...base, status: 'live', roundTrip, fares } satisfies FaresResponse, {
+    const allResultsUrl = searchDeepLink(query.origin, query.destination, query.departureDate, config.marker, query.returnDate);
+    return Response.json({ ...base, status: 'live', roundTrip, fares, allResultsUrl } satisfies FaresResponse, {
       headers: {
         'Cache-Control': `public, s-maxage=${REVALIDATE_SECONDS / 2}, stale-while-revalidate=${REVALIDATE_SECONDS}`,
       },

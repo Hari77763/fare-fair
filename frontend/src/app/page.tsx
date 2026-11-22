@@ -555,6 +555,30 @@ export default function FlightBookingApp() {
                 ))
               )}
             </div>
+
+            {isLive && !showSavedOnly && live.allResultsUrl && (
+              <a
+                href={live.allResultsUrl}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                data-reveal
+                className="glass-card lift-on-hover mt-3 flex items-center justify-between gap-4 rounded-[var(--radius-card)] px-5 py-4"
+              >
+                <span>
+                  <span className="block text-sm font-semibold text-[var(--text-primary)]">
+                    See every flight for this date
+                  </span>
+                  <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">
+                    FairFare shows the cheapest fares travellers found recently. Aviasales checks all airlines and agencies
+                    live.
+                  </span>
+                </span>
+                <span className="btn btn-secondary h-9 shrink-0 px-4 text-xs">
+                  Open Aviasales
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </span>
+              </a>
+            )}
           </div>
         </div>
       </main>

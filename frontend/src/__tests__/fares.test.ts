@@ -70,7 +70,16 @@ describe('normalizePricesForDates', () => {
   it('never links to a non-Aviasales host (falls back to a search deep link)', () => {
     const f = fares.find((x) => x.airlineCode === 'QP')!;
     expect(f.bookingUrl).toBe('https://www.aviasales.com/search/DEL1412BOM1?marker=12345');
-    expect(f.durationMinutes).toBe(300);
+  });
+
+  it('does not trust durations for connecting itineraries (they exclude layovers)', () => {
+    const f = fares.find((x) => x.airlineCode === 'QP')!;
+    expect(f.transfers).toBe(1);
+    expect(f.durationMinutes).toBeNull();
+  });
+
+  it('refuses prices in a currency other than INR', () => {
+    expect(() => normalizePricesForDates({ ...SAMPLE, currency: 'rub' }, CTX)).toThrow(/currency/);
   });
 
   it('returns [] for unexpected payloads', () => {
@@ -105,6 +114,27 @@ describe('normalizeCalendar', () => {
       { dateISO: '2026-12-12', priceInr: null },
       { dateISO: '2026-12-13', priceInr: 5120 },
       { dateISO: '2026-12-14', priceInr: null },
+    ]);
+  });
+
+  it('reads the v3 month shape (departure_at + price) used in production', () => {
+    const days = normalizeCalendar(
+      [
+        {
+          currency: 'inr',
+          data: [
+            { departure_at: '2026-12-13T07:10:00+05:30', price: 7036 },
+            { departure_at: '2026-12-13T21:00:00+05:30', price: 6900 },
+            { departure_at: '2026-12-14T06:00:00+05:30', price: 5200 },
+          ],
+        },
+      ],
+      '2026-12-13',
+      2
+    );
+    expect(days).toEqual([
+      { dateISO: '2026-12-13', priceInr: 6900 },
+      { dateISO: '2026-12-14', priceInr: 5200 },
     ]);
   });
 
@@ -219,11 +249,14 @@ describe('API routes', () => {
     expect(text).not.toContain('secret-token-123');
     const body = JSON.parse(text);
     expect(body.status).toBe('live');
-    expect(body.fares).toHaveLength(2);
+    expect(body.fares).toHaveLength(2); // main + non-stop queries merged and de-duplicated
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(body.allResultsUrl).toMatch(/^https:\/\/www\.aviasales\.com\/search\/DELBOM|^https:\/\/www\.aviasales\.com\/search\/DEL\d{4}BOM1/);
 
     // Token travels only in the upstream request header, not the URL
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toContain('/aviasales/v3/prices_for_dates');
+    expect(url).toContain('currency=inr');
     expect(url).not.toContain('secret-token-123');
     expect((init.headers as Record<string, string>)['X-Access-Token']).toBe('secret-token-123');
   });
@@ -235,6 +268,21 @@ describe('API routes', () => {
     const res = await faresGET(req(`/api/fares?origin=DEL&destination=BOM&departure_date=${future}`));
     expect(res.status).toBe(502);
     expect(await res.json()).toMatchObject({ status: 'error', message: 'The live fare source rejected our access key.' });
+  });
+
+  it('still returns fares when only the optional non-stop query fails', async () => {
+    process.env.TRAVELPAYOUTS_TOKEN = 't';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        url.includes('direct=true')
+          ? new Response('{}', { status: 500 })
+          : new Response(JSON.stringify(SAMPLE), { status: 200 })
+      )
+    );
+    const res = await faresGET(req(`/api/fares?origin=DEL&destination=BOM&departure_date=${future}`));
+    expect(res.status).toBe(200);
+    expect((await res.json()).fares).toHaveLength(2);
   });
 
   it('calendar route fetches each month in the window', async () => {

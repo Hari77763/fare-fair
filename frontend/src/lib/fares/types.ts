@@ -36,6 +36,8 @@ export interface FaresResponse {
   currency: 'INR';
   fetchedAt: string;
   source: 'Aviasales';
+  /** Full live search on the seller for this route and date (affiliate-tagged) */
+  allResultsUrl?: string;
   message?: string;
 }
 

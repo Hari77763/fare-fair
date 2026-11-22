@@ -7,7 +7,7 @@
  *
  * Endpoints:
  *  - /aviasales/v3/prices_for_dates  cheapest recent fares for a date (+ link)
- *  - /v1/prices/calendar             cheapest recent fare per day of a month
+ *    (also used per month for the cheapest-fare-per-day calendar)
  * Both serve cached prices that real travellers found recently; they are not
  * a live seat check, and the UI labels them that way.
  */
@@ -141,6 +141,7 @@ export function normalizePricesForDates(
   json: unknown,
   ctx: { origin: string; destination: string; departureDate: string; returnDate?: string; marker?: string }
 ): LiveFare[] {
+  assertInr(json);
   const data = (json as { data?: unknown })?.data;
   if (!Array.isArray(data)) return [];
 
@@ -156,6 +157,7 @@ export function normalizePricesForDates(
     const airlineCode = str(item.airline).toUpperCase();
     const flightNo = str(item.flight_number);
     const duration = num(item.duration_to) ?? num(item.duration);
+    const transfers = Math.max(0, num(item.transfers ?? item.number_of_changes) ?? 0);
     const origin = str(item.origin) || ctx.origin;
     const destination = str(item.destination) || ctx.destination;
 
@@ -169,8 +171,10 @@ export function normalizePricesForDates(
       flightNumber: airlineCode && flightNo ? `${airlineCode} ${flightNo}` : '',
       departureAt,
       returnAt: str(item.return_at) || undefined,
-      durationMinutes: duration && duration > 0 ? Math.round(duration) : null,
-      transfers: Math.max(0, num(item.transfers ?? item.number_of_changes) ?? 0),
+      // The source's duration excludes layovers on connecting itineraries
+      // (verified against live data), so it is only trusted for non-stops.
+      durationMinutes: transfers === 0 && duration && duration > 0 ? Math.round(duration) : null,
+      transfers,
       priceInr: Math.round(price),
       bookingUrl:
         buildBookingUrl(item.link, ctx.marker) ??
@@ -183,6 +187,14 @@ export function normalizePricesForDates(
     if (!existing || fare.priceInr < existing.priceInr) byId.set(fare.id, fare);
   }
   return Array.from(byId.values()).sort((a, b) => a.priceInr - b.priceInr);
+}
+
+/** Prices are requested in INR; refuse to show anything else as rupees. */
+export function assertInr(json: unknown) {
+  const currency = (json as { currency?: unknown })?.currency;
+  if (typeof currency === 'string' && currency.toLowerCase() !== 'inr') {
+    throw new UpstreamError(`Unexpected currency "${currency}"`, 502);
+  }
 }
 
 export function addDays(iso: string, n: number) {
@@ -205,10 +217,13 @@ export function normalizeCalendar(jsons: unknown[], start: string, days: number)
   };
 
   for (const json of jsons) {
+    assertInr(json);
     const data = (json as { data?: unknown })?.data;
     if (Array.isArray(data)) {
       for (const item of data as Record<string, unknown>[]) {
-        consider(str(item?.depart_date).slice(0, 10), num(item?.value ?? item?.price));
+        // v3 items carry departure_at (local ISO); v2 items carry depart_date
+        const date = str(item?.departure_at ?? item?.depart_date).slice(0, 10);
+        consider(date, num(item?.price ?? item?.value));
       }
     } else if (data && typeof data === 'object') {
       for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
@@ -272,8 +287,30 @@ export async function searchFares(
   if (q.returnDate) params.return_at = q.returnDate;
   if (cfg.market) params.market = cfg.market;
 
-  const json = await getJson('/aviasales/v3/prices_for_dates', params, cfg.token, fetchImpl);
-  return normalizePricesForDates(json, { ...q, marker: cfg.marker });
+  // The cache keeps the cheapest ticket per date, so also ask for the
+  // cheapest non-stop to give travellers a real choice. Only the main query
+  // is required; a failed non-stop query just means one fewer option.
+  const ctx = { ...q, marker: cfg.marker };
+  const [main, direct] = await Promise.allSettled([
+    getJson('/aviasales/v3/prices_for_dates', params, cfg.token, fetchImpl),
+    getJson('/aviasales/v3/prices_for_dates', { ...params, direct: 'true' }, cfg.token, fetchImpl),
+  ]);
+  if (main.status === 'rejected') throw main.reason;
+
+  const merged = new Map<string, LiveFare>();
+  const lists = [normalizePricesForDates(main.value, ctx)];
+  if (direct.status === 'fulfilled') {
+    try {
+      lists.push(normalizePricesForDates(direct.value, ctx));
+    } catch {
+      /* ignore an unusable non-stop response */
+    }
+  }
+  for (const fare of lists.flat()) {
+    const prev = merged.get(fare.id);
+    if (!prev || fare.priceInr < prev.priceInr) merged.set(fare.id, fare);
+  }
+  return Array.from(merged.values()).sort((a, b) => a.priceInr - b.priceInr);
 }
 
 export async function fetchCalendar(
@@ -286,16 +323,22 @@ export async function fetchCalendar(
   const months = Array.from(new Set([q.start.slice(0, 7), addDays(q.start, q.days - 1).slice(0, 7)]));
   const jsons = await Promise.all(
     months.map((month) =>
+      // Same endpoint and currency as search, so the strip and the results
+      // always agree; a month query returns the cheapest fare per day.
       getJson(
-        '/v1/prices/calendar',
+        '/aviasales/v3/prices_for_dates',
         {
           origin: q.origin,
           destination: q.destination,
-          // The docs use both names for this parameter; send both.
-          depart_date: month,
-          departure_date: month,
-          calendar_type: 'departure_date',
-          currency: 'INR',
+          departure_at: month,
+          one_way: 'true',
+          direct: 'false',
+          sorting: 'price',
+          unique: 'false',
+          currency: 'inr',
+          limit: '1000',
+          page: '1',
+          ...(cfg.market ? { market: cfg.market } : {}),
         },
         cfg.token as string,
         fetchImpl

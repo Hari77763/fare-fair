@@ -18,6 +18,7 @@ export interface LiveFaresState {
   roundTrip: boolean;
   fetchedAt?: string;
   message?: string;
+  allResultsUrl?: string;
   query?: FareSearch;
 }
 
@@ -68,6 +69,7 @@ export function useLiveFares() {
         roundTrip: body.roundTrip,
         fetchedAt: body.fetchedAt,
         message: body.message,
+        allResultsUrl: body.allResultsUrl,
         query: q,
       };
     } catch (err) {
