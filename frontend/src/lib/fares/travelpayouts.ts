@@ -50,6 +50,15 @@ export interface FareQuery {
   destination: string;
   departureDate: string;
   returnDate?: string;
+  /** Optional data-market override (two letters, e.g. "in") */
+  market?: string;
+}
+
+const MARKET = /^[a-z]{2}$/;
+function parseMarket(params: URLSearchParams): string | undefined | null {
+  const raw = params.get('market');
+  if (raw === null || raw === '') return undefined;
+  return MARKET.test(raw) ? raw : null;
 }
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -73,7 +82,9 @@ export function parseFareQuery(params: URLSearchParams, today = new Date()): Par
     if (!isRealDate(returnRaw)) return { ok: false, error: 'return_date must be YYYY-MM-DD' };
     if (returnRaw < departureDate) return { ok: false, error: 'return_date must be on or after departure_date' };
   }
-  return { ok: true, value: { origin, destination, departureDate, returnDate: returnRaw || undefined } };
+  const market = parseMarket(params);
+  if (market === null) return { ok: false, error: 'market must be two lowercase letters' };
+  return { ok: true, value: { origin, destination, departureDate, returnDate: returnRaw || undefined, market } };
 }
 
 export interface CalendarQuery {
@@ -81,6 +92,7 @@ export interface CalendarQuery {
   destination: string;
   start: string;
   days: number;
+  market?: string;
 }
 
 export function parseCalendarQuery(params: URLSearchParams): Parsed<CalendarQuery> {
@@ -93,7 +105,9 @@ export function parseCalendarQuery(params: URLSearchParams): Parsed<CalendarQuer
   }
   if (!isRealDate(start)) return { ok: false, error: 'start must be YYYY-MM-DD' };
   if (!Number.isInteger(days) || days < 1 || days > 14) return { ok: false, error: 'days must be 1–14' };
-  return { ok: true, value: { origin, destination, start, days } };
+  const market = parseMarket(params);
+  if (market === null) return { ok: false, error: 'market must be two lowercase letters' };
+  return { ok: true, value: { origin, destination, start, days, market } };
 }
 
 // ---------------------------------------------------------------- links
@@ -285,7 +299,8 @@ export async function searchFares(
     page: '1',
   };
   if (q.returnDate) params.return_at = q.returnDate;
-  if (cfg.market) params.market = cfg.market;
+  const market = q.market ?? cfg.market;
+  if (market) params.market = market;
 
   // The cache keeps the cheapest ticket per date, so also ask for the
   // cheapest non-stop to give travellers a real choice. Only the main query
@@ -338,7 +353,7 @@ export async function fetchCalendar(
           currency: 'inr',
           limit: '1000',
           page: '1',
-          ...(cfg.market ? { market: cfg.market } : {}),
+          ...((q.market ?? cfg.market) ? { market: (q.market ?? cfg.market) as string } : {}),
         },
         cfg.token as string,
         fetchImpl
